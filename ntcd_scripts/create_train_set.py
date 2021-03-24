@@ -25,8 +25,8 @@ if dataset_name == 'ntcd_timit':
 ## Dataset
 dataset_types = ['train', 'validation']
 
-# dataset_size = 'subset'
-dataset_size = 'complete'
+dataset_size = 'subset'
+# dataset_size = 'complete'
 
 # Labels
 labels = 'vad_labels'
@@ -99,6 +99,10 @@ def main():
                 output_clean_file_paths = speech_list(input_speech_dir=input_video_dir,
                                     dataset_type=dataset_type)
 
+            # Create file list
+            mat_file_paths = video_list(input_video_dir=input_video_dir,
+                                    dataset_type=dataset_type)
+
             # Delete datasets if already exists
             if 'X_' + dataset_type in f:
                 del f['X_' + dataset_type]
@@ -119,7 +123,8 @@ def main():
                 # VAR = E[X**2] - E[X]**2
                 channels_sum, channels_squared_sum = 0., 0.
 
-            for i, input_clean_file_path in tqdm(enumerate(input_clean_file_paths)):
+            for i, (input_clean_file_path, mat_file_path) \
+                in tqdm(enumerate(zip(input_clean_file_paths, mat_file_paths))):
 
                 # Read clean speech
                 speech, fs_speech = torchaudio.load(input_video_dir + input_clean_file_path)
@@ -143,7 +148,10 @@ def main():
                 
                 # Real + j * Img
                 speech_tf = speech_tf[...,0].numpy() + 1j * speech_tf[...,1].numpy()
-                    
+
+                # Spectrogram
+                spectrogram = np.power(abs(speech_tf), 2)
+
                 if labels == 'vad_labels':
                     # Compute vad
                     speech_vad = clean_speech_VAD(speech.numpy(),
@@ -165,8 +173,14 @@ def main():
 
                     label = speech_ibm
                 
-                # Spectrogram
-                spectrogram = np.power(abs(speech_tf), 2)
+                # Read video
+                with h5.File(input_video_dir + mat_file_path, 'r') as vfile:
+                    for key, value in vfile.items():
+                        video = np.array(value)
+
+                # Reduce frames of label if video is shorter
+                if label.shape[-1] > video.shape[0]:
+                    label = label[...,:video.shape[0]]
 
                 # Store spectrogram in dataset
                 fx.resize((fx.shape[-1] + spectrogram.shape[-1]), axis = fx.ndim-1)
