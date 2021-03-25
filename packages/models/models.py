@@ -3,7 +3,7 @@ from torch import nn
 from torch.nn import init
 import torch.nn.functional as F
 
-from python.models.distributions import log_gaussian, log_standard_gaussian
+from packages.models.distributions import log_gaussian, log_standard_gaussian
 
 class Stochastic(nn.Module):
     def reparametrize(self, mu, log_var):
