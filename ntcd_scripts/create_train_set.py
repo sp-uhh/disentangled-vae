@@ -1,3 +1,7 @@
+#TODO: upsample video
+#TODO: then read the upsampled video
+#TODO: then reduce size of spectro & label
+
 import sys
 sys.path.append('.')
 
@@ -173,14 +177,18 @@ def main():
 
                     label = speech_ibm
                 
-                # Read video
-                with h5.File(input_video_dir + mat_file_path, 'r') as vfile:
-                    for key, value in vfile.items():
-                        video = np.array(value)
+                # Read preprocessed video
+                h5_file_path = output_video_dir + mat_file_path
+                h5_file_path = os.path.splitext(h5_file_path)[0] + '_upsampled.h5'
+                # h5_file_path = os.path.splitext(h5_file_path)[0] + '_normvideo.h5'
+                with h5.File(h5_file_path, 'r') as file:
+                    video = np.array(file["X"][:])
 
-                # Reduce frames of label if video is shorter
+                # Reduce frames of spectrogram and label
+                # if video is shorter
                 if label.shape[-1] > video.shape[0]:
                     label = label[...,:video.shape[0]]
+                    spectrogram = spectrogram[...,:video.shape[0]]
 
                 # Store spectrogram in dataset
                 fx.resize((fx.shape[-1] + spectrogram.shape[-1]), axis = fx.ndim-1)
