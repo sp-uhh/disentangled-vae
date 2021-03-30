@@ -7,6 +7,7 @@ import os
 import concurrent.futures # for multiprocessing
 import time
 import pickle
+import torch, torchaudio
 
 
 # Parameters
@@ -91,13 +92,14 @@ def process_save_utt(args):
     # Separate args
     input_clean_file_path, output_clean_file_path, noise_type, snr_dB  = args[0], args[1], args[2], args[3]
 
-    speech, fs_speech = sf.read(input_speech_dir + input_clean_file_path, samplerate=None)
+    speech, fs_speech = torchaudio.load(input_speech_dir + input_clean_file_path)
+    speech = speech[0] # 1channel
 
     # Cut burst at begining of file
     speech = speech[int(0.1*fs):]
 
     # Normalize audio
-    speech = speech/(np.max(np.abs(speech)))
+    speech = speech/(torch.max(torch.abs(speech)))
 
     if fs != fs_speech:
         raise ValueError('Unexpected sampling rate')
@@ -106,14 +108,14 @@ def process_save_utt(args):
     noise = noise_segment(noise_audios, noise_type, speech)
 
     # Compute noise gain
-    speech_power = np.sum(np.power(speech, 2))
-    noise_power = np.sum(np.power(noise, 2))
-    noise_power_target = speech_power*np.power(10,-snr_dB/10)
+    speech_power = torch.sum(speech ** 2)
+    noise_power = torch.sum(speech ** 2)
+    noise_power_target = speech_power*(10 ** (-snr_dB/10))
     k = noise_power_target / noise_power
-    noise = noise * np.sqrt(k)
+    noise = noise * torch.sqrt(k)
 
     # Normalize by max of speech, noise, speech+noise
-    norm = np.max(abs(np.concatenate([speech, noise, speech+noise])))
+    norm = torch.max(abs(torch.cat([speech, noise, speech+noise])))
     mixture = (speech+noise) / norm
     speech /= norm
     noise /= norm
@@ -124,9 +126,9 @@ def process_save_utt(args):
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     
-    sf.write(output_path + '_s.wav', speech, fs)
-    sf.write(output_path + '_n.wav', noise, fs)
-    sf.write(output_path + '_x.wav', mixture, fs)
+    torchaudio.save(output_path + '_s.wav', speech, fs)
+    torchaudio.save(output_path + '_n.wav', noise, fs)
+    torchaudio.save(output_path + '_x.wav', mixture, fs)
 
     # TODO: save SNR, level_s, level_n in a figure
 
@@ -158,8 +160,9 @@ def main():
         #if noise already preprocessed, read files directly
         if os.path.exists(preprocessed_noise_path):
             
-            noise_audio, fs_noise = sf.read(preprocessed_noise_path)
-            
+            noise_audio, fs_noise = torchaudio.load(preprocessed_noise_path)
+            noise_audio = noise_audio[0] #1channel
+
             if fs != fs_noise:
                 raise ValueError('Unexpected sampling rate')
             
