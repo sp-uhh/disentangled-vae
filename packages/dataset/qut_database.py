@@ -11,7 +11,7 @@ import os
 import re
 from pathlib import Path
 from librosa.core import resample # do not use it because slow, use pysox instead
-from python.utils import get_key
+from packages.utils import get_key
 
 """
 Noise-related
@@ -91,19 +91,7 @@ def noise_list_preprocessed(preprocessed_noise_dir, dataset_type='test'):
     Return:
         subset_noise_paths
     """
-    data_dir = preprocessed_noise_dir
-
-    ### Training data
-    if dataset_type == 'train':
-        print('Not implemented')
-
-    ### Validation data
-    if dataset_type == 'validation':
-        print('Not implemented')
-
-    ### Test data
-    if dataset_type == 'test':
-        data_dir += 'si_et_05/'
+    data_dir = preprocessed_noise_dir + dataset_type
 
     # List of files
     noise_paths = glob(data_dir + '**/*.wav',recursive=True)
