@@ -150,3 +150,44 @@ def stft_pytorch(x,
                      center=center,
                      pad_mode=pad_mode)
     return Sxx
+
+def istft_pytorch(Sxx,
+                  fs=16000,
+                  wlen_sec=50e-3,
+                  win='hann',
+                  hop_percent=0.25,
+                  center=True,
+                  max_len=None):
+    """
+    Inverse STFT
+
+    Sxx: input (as spectrogram)
+    fs: frequence sampling (in Hz)
+    framesz: framesize (in seconds)
+    hop: 1 - overlap (in [0,1])
+    max_len: shorten output time signal
+             in case output time signal is longer than input time signal
+
+    return
+    t, x (default: float64)
+    """
+    if wlen_sec * fs != int(wlen_sec * fs):
+        raise ValueError("wlen_sample of iSTFT is not an integer.")
+    nfft = int(wlen_sec * fs) # STFT window length in samples
+    hopsamp = int(hop_percent * nfft) # hop size in samples
+
+    if win == 'hann':
+        window = torch.hann_window(window_length=nfft)
+
+    x = torch.istft(input=Sxx,
+                    n_fft=nfft,
+                    hop_length=hopsamp,
+                    window=window,
+                    center=center,
+                    normalized=False,
+                    onesided=True)
+                    # length=max_len)
+    
+    if max_len:
+        x = x[:int(max_len*fs)]
+    return x

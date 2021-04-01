@@ -7,8 +7,6 @@ import os
 import concurrent.futures # for multiprocessing
 import time
 import pickle
-import torch, torchaudio
-
 
 # Parameters
 ## Dataset
@@ -109,7 +107,7 @@ def process_save_utt(args):
 
     # Compute noise gain
     speech_power = torch.sum(speech ** 2)
-    noise_power = torch.sum(speech ** 2)
+    noise_power = torch.sum(noise ** 2)
     noise_power_target = speech_power*(10 ** (-snr_dB/10))
     k = noise_power_target / noise_power
     noise = noise * torch.sqrt(k)
@@ -189,11 +187,11 @@ def main():
 
     t1 = time.perf_counter()
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=None) as executor:
-        executor.map(process_save_utt, args)
+    # with concurrent.futures.ThreadPoolExecutor(max_workers=None) as executor:
+    #     executor.map(process_save_utt, args)
     
-    # # Test script on 1 sublist
-    # process_save_utt(args[0])
+    # Test script on 1 sublist
+    process_save_utt(args[0])
 
     t2 = time.perf_counter()
     print(f'Finished in {t2 - t1} seconds')

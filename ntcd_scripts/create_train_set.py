@@ -11,10 +11,8 @@ import os
 from tqdm import tqdm
 import math
 import h5py as h5
-import torch
-import torchaudio
 
-from packages.processing.stft import stft_pytorch
+from packages.processing.stft import stft
 from packages.processing.video import preprocess_ntcd_matlab
 from packages.processing.target import clean_speech_VAD, clean_speech_IBM,\
                                 noise_robust_clean_speech_IBM # because clean audio is very noisy
@@ -29,8 +27,8 @@ if dataset_name == 'ntcd_timit':
 ## Dataset
 dataset_types = ['train', 'validation']
 
-dataset_size = 'subset'
-# dataset_size = 'complete'
+# dataset_size = 'subset'
+dataset_size = 'complete'
 
 # Labels
 labels = 'vad_labels'
@@ -131,34 +129,31 @@ def main():
                 in tqdm(enumerate(zip(input_clean_file_paths, mat_file_paths))):
 
                 # Read clean speech
-                speech, fs_speech = torchaudio.load(input_video_dir + input_clean_file_path)
-                speech = speech[0] # 1channel
+                speech, fs_speech = sf.read(input_video_dir + input_clean_file_path)
 
                 if fs != fs_speech:
                     raise ValueError('Unexpected sampling rate')
 
                 # Normalize audio
-                speech = speech/(torch.max(torch.abs(speech)))
+                speech = speech/(np.max(np.abs(speech)))
 
                 # TF representation (PyTorch)
-                speech_tf = stft_pytorch(speech,
+                speech_tf = stft(speech,
                         fs=fs,
                         wlen_sec=wlen_sec,
                         win=win, 
                         hop_percent=hop_percent,
                         center=center,
                         pad_mode=pad_mode,
-                        pad_at_end=pad_at_end) # shape = (freq_bins, frames)
+                        pad_at_end=pad_at_end,
+                        dtype=dtype) # shape = (freq_bins, frames)
                 
-                # Real + j * Img
-                speech_tf = speech_tf[...,0].numpy() + 1j * speech_tf[...,1].numpy()
-
                 # Spectrogram
                 spectrogram = np.power(abs(speech_tf), 2)
 
                 if labels == 'vad_labels':
                     # Compute vad
-                    speech_vad = clean_speech_VAD(speech.numpy(),
+                    speech_vad = clean_speech_VAD(speech,
                                                 fs=fs,
                                                 wlen_sec=wlen_sec,
                                                 hop_percent=hop_percent,

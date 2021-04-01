@@ -57,7 +57,7 @@ log_interval = 250
 start_epoch = 1
 end_epoch = 500
 
-model_name = 'ntcd_M1_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+model_name = 'ntcd_M1_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
 # model_name = 'M1_hdim_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], z_dim, end_epoch)
 
 

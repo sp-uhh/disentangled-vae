@@ -38,13 +38,13 @@ class EM:
         self.device = device
 
         # Initialize NMF parameters
-        N, F = X.shape
+        F, N = X.shape # (freq_bins, frames)
         W_init = torch.max(torch.rand(F,nmf_rank, device=self.device), eps * torch.ones(F, nmf_rank, device=self.device))
         H_init = torch.max(torch.rand(nmf_rank, N, device=self.device), eps * torch.ones(nmf_rank, N, device=self.device))
         g_init = torch.ones(N, device=self.device) # float32 by default
 
-        self.X = X.T # mixture STFT, shape (F,N)
-        self.X_abs_2 = torch.tensor(np.abs(X.T)**2, device=self.device)
+        self.X = X # mixture STFT, shape (F,N)
+        self.X_abs_2 = torch.tensor(np.abs(X)**2, device=self.device)
         self.W = W_init
         self.H = H_init
         self.compute_Vb() # noise variance, shape (F, N)
@@ -174,7 +174,7 @@ class EM:
             
         self.S_hat = self.tensor2np(WFs.cpu())*self.X
         self.N_hat = self.tensor2np(WFn.cpu())*self.X
-            
+
         return cost
 
 
