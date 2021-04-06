@@ -33,7 +33,7 @@ class EM:
         # shape (R, F, N)
         self.Vx = None # mixture variance, shape (R, F, N)          
 
-    def init_parameters(self, X, nmf_rank, eps, device="cpu"):
+    def init_parameters(self, X, S, nmf_rank, eps, device="cpu"):
 
         self.device = device
 
@@ -45,6 +45,7 @@ class EM:
 
         self.X = X # mixture STFT, shape (F,N)
         self.X_abs_2 = torch.tensor(np.abs(X)**2, device=self.device)
+        self.S_abs_2 = torch.tensor(np.abs(S)**2, device=self.device)
         self.W = W_init
         self.H = H_init
         self.compute_Vb() # noise variance, shape (F, N)
@@ -358,14 +359,16 @@ class MCEM_M1(EM):
         self.burnin_WF = burnin_WF
         self.var_RW = var_RW        
                 
-    def init_parameters(self, X, vae, nmf_rank, eps, device):
+    def init_parameters(self, X, S, vae, nmf_rank, eps, device):
         if type(vae).__name__ == 'RVAE':
             raise NameError('MCEM algorithm only valid for FFNN VAE')
         
-        super().init_parameters(X=X, nmf_rank=nmf_rank, eps=eps, device=device)
+        super().init_parameters(X=X, S=S, nmf_rank=nmf_rank, eps=eps, device=device)
         self.vae = vae
         _, Z, _ = self.vae.encoder(torch.t(self.X_abs_2))
+        _, Zclean, _ = self.vae.encoder(torch.t(self.S_abs_2))
         self.Z = torch.t(Z) # Last draw of the latent variables, shape (L, N)
+        self.Zclean = torch.t(Zclean) # Last draw of the latent variables, shape (L, N)
         self.X_abs_2_t = self.X_abs_2.clone()
         
     def sample_posterior(self, Z, y, nsamples=10, burnin=30):
@@ -464,6 +467,7 @@ class MCEM_M1(EM):
         # update last draw
         #self.Z = self.tensor2np(torch.squeeze(Z_t[:,-1,:])).T
         self.Z = torch.t(torch.squeeze(Z_t[:,-1,:]))
+        # Z_t = torch.t(self.Zclean)
         
         # compute variances
         self.compute_Vs(Z_t)  
@@ -477,6 +481,8 @@ class MCEM_M1(EM):
             Z_t = self.sample_posterior(self.Z, self.nsamples_WF, 
                                         self.burnin_WF)
             
+            # Z_t = torch.t(self.Zclean)
+
             # compute variances
             self.compute_Vs(Z_t)
             self.compute_Vs_scaled()

@@ -4,14 +4,13 @@ sys.path.append('.')
 import os
 import torch
 import pickle
-import numpy as np
 from tqdm import tqdm
-import math
+import numpy as np
 from torch.utils.data import DataLoader
 
 from packages.utils import count_parameters
 from packages.data_handling import HDF5CleanSpectrogramLabeledFrames
-from packages.models.models import VariationalAutoencoder
+from packages.models.models import DeepGenerativeModel
 from packages.models.utils import elbo
 
 ##################################### SETTINGS #####################################################
@@ -43,10 +42,14 @@ rdcc_nslots = 1e4 # The number of slots in the cache's hash table
 
 # Deep Generative Model
 x_dim = 513 
+y_dim = 1
 z_dim = 16
 h_dim = [128, 128]
-std_norm =False
+std_norm = False
 eps = 1e-8
+
+# Classifier
+classifier = None
 
 # Training
 batch_size = 128
@@ -56,9 +59,8 @@ log_interval = 250
 start_epoch = 1
 end_epoch = 500
 
-model_name = 'ntcd_M1_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'M1_hdim_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], z_dim, end_epoch)
-
+model_name = 'ntcd_M2_VAD_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+# model_name = 'M2_VAD_hdim_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], z_dim, end_epoch)
 
 # Data directories
 input_video_dir = os.path.join('data', dataset_size, 'processed/')
@@ -89,7 +91,7 @@ print('- Number of validation batches: {}'.format(len(valid_loader)))
 
 def main():
     print('Create model')
-    model = VariationalAutoencoder([x_dim, z_dim, h_dim])
+    model = DeepGenerativeModel([x_dim, y_dim, z_dim, h_dim], classifier)
     
     if cuda: model = model.to(device, non_blocking=non_blocking)
 
@@ -122,15 +124,16 @@ def main():
         model.train()
         total_elbo, total_likelihood, total_kl = (0, 0, 0)
         for batch_idx, (x, y) in tqdm(enumerate(train_loader)):
-            if cuda: x = x.to(device, non_blocking=non_blocking)
+            if cuda:
+                x, y = x.to(device, non_blocking=non_blocking), y.to(device, non_blocking=non_blocking)
 
             if std_norm:
                 x_norm = x - mean.T
                 x_norm /= (std + eps).T
 
-                r, mu, logvar = model(x_norm)
+                r, mu, logvar = model(x_norm, y)
             else:
-                r, mu, logvar = model(x)
+                r, mu, logvar = model(x, y)
             
             loss, recon_loss, KL = elbo(x, r, mu, logvar, eps)
             loss.backward()
@@ -151,7 +154,7 @@ def main():
 
         if epoch % 1 == 0:
             model.eval()
-            
+
             print("Epoch: {}".format(epoch))
             print("[Train]\t\t ELBO: {:.2f}, Recon.: {:.2f}, KL: {:.2f}"\
                 "".format(total_elbo / t, total_likelihood / t, total_kl / t))
@@ -164,18 +167,18 @@ def main():
 
             total_elbo, total_likelihood, total_kl = (0, 0, 0)
 
-            for batch_idx, (x, y) in tqdm(enumerate(valid_loader)):
+            for batch_idx, (x, y) in enumerate(valid_loader):
 
                 if cuda:
-                    x = x.cuda(device=device, non_blocking=non_blocking)
+                    x, y = x.to(device, non_blocking=non_blocking), y.to(device, non_blocking=non_blocking)
 
                 if std_norm:
                     x_norm = x - mean.T
                     x_norm /= (std + eps).T
 
-                    r, mu, logvar = model(x_norm)
+                    r, mu, logvar = model(x_norm, y)
                 else:
-                    r, mu, logvar = model(x)
+                    r, mu, logvar = model(x, y)
 
                 loss, recon_loss, KL = elbo(x, r, mu, logvar, eps)
 
@@ -191,8 +194,8 @@ def main():
                 file=open(model_dir + '/' + 'output_epoch.log','a'))
 
             # Save model
-            torch.save(model.state_dict(), model_dir + '/' + 'M1_epoch_{:03d}_vloss_{:.2f}.pt'.format(
+            torch.save(model.state_dict(), model_dir + '/' + 'M2_epoch_{:03d}_vloss_{:.2f}.pt'.format(
                 epoch, total_elbo / m))
-
+            
 if __name__ == '__main__':
     main()

@@ -2,7 +2,7 @@ import sys
 sys.path.append('.')
 
 import numpy as np
-import soundfile as sf
+import torch, torchaudio
 import os
 from tqdm import tqdm
 import math
@@ -15,7 +15,7 @@ import time
 from scipy.fftpack import idct
 import cv2
 
-from packages.processing.stft import stft
+from packages.processing.stft import stft_pytorch
 from packages.processing.video import preprocess_ntcd_matlab
 from packages.processing.target import clean_speech_VAD, clean_speech_IBM,\
                                 noise_robust_clean_speech_IBM # because clean audio is very noisy
@@ -26,11 +26,11 @@ if dataset_name == 'ntcd_timit':
     from packages.dataset.ntcd_timit import video_list, kaldi_list, speech_list
 
 ## Dataset
-dataset_types = ['train', 'validation']
-# dataset_types = ['test']
+# dataset_types = ['train', 'validation']
+dataset_types = ['test']
 
-dataset_size = 'subset'
-# dataset_size = 'complete'
+# dataset_size = 'subset'
+dataset_size = 'complete'
 
 # Labels
 labels = 'vad_labels'
@@ -178,28 +178,31 @@ def process_write_video(args):
         # # # video = np.repeat(video[:,:,None],3,axis=2)
     
     # Read clean speech
-    speech, fs_speech = sf.read(input_video_dir + input_clean_file_path, samplerate=None)
+    speech, fs_speech = torchaudio.load(input_video_dir + input_clean_file_path)
+    speech = speech[0] # 1channel
 
     if fs != fs_speech:
         raise ValueError('Unexpected sampling rate')
 
     # Normalize audio
-    speech = speech/(np.max(np.abs(speech)))
+    speech = speech / (torch.max(torch.abs(speech)))
 
     # TF reprepsentation
-    speech_tf = stft(speech,
+    speech_tf = stft_pytorch(speech,
                     fs=fs,
                     wlen_sec=wlen_sec,
                     win=win, 
                     hop_percent=hop_percent,
                     center=center,
                     pad_mode=pad_mode,
-                    pad_at_end=pad_at_end,
-                    dtype=dtype) # shape = (freq_bins, frames)
+                    pad_at_end=pad_at_end) # shape = (freq_bins, frames)
+    
+    # Real + j * Img
+    speech_tf = speech_tf[...,0].numpy() + 1j * speech_tf[...,1].numpy()        
 
     if labels == 'vad_labels':
         # Compute vad
-        speech_vad = clean_speech_VAD(speech,
+        speech_vad = clean_speech_VAD(speech.numpy(),
                                       fs=fs,
                                       wlen_sec=wlen_sec,
                                       hop_percent=hop_percent,
@@ -243,8 +246,7 @@ def process_write_video(args):
     # output_h5_file = os.path.splitext(output_h5_file)[0] + '_.h5'
     # output_h5_file = os.path.splitext(output_h5_file)[0] + '_normvideo.h5'
 
-    if not os.path.exists(os.path.dirname(output_h5_file)):
-        os.makedirs(os.path.dirname(output_h5_file))
+    os.makedirs(os.path.dirname(output_h5_file), exist_ok=True)
 
     # Remove file if already exists
     if os.path.exists(output_h5_file):
@@ -268,8 +270,7 @@ def process_write_video(args):
     output_h5_file = output_video_dir + output_clean_file_path
     output_h5_file = os.path.splitext(output_h5_file)[0] + '_' + labels + '.h5'
 
-    if not os.path.exists(os.path.dirname(output_h5_file)):
-        os.makedirs(os.path.dirname(output_h5_file))
+    os.makedirs(os.path.dirname(output_h5_file), exist_ok=True)
 
     # Remove file if already exists
     if os.path.exists(output_h5_file):

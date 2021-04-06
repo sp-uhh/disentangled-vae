@@ -43,7 +43,7 @@ dtype = 'complex64'
 
 # Hyperparameters 
 # M1
-model_name = 'ntcd_M1_hdim_128_128_zdim_016_end_epoch_500/M1_epoch_274_vloss_397.02'
+model_name = 'ntcd_M1_nonorm_hdim_128_128_zdim_016_end_epoch_500/M1_epoch_164_vloss_408.82'
 x_dim = 513 
 z_dim = 16
 h_dim = [128, 128]
@@ -94,9 +94,24 @@ def process_utt(mcem, model, mean, std, clean_file_path, device):
     
     T_orig = len(x_t)
     
-    # TF representation (PyTorch)
+    # TF representation (Librosa)
     # Input should be (frames, freq_bins)
     x_tf = stft(x_t,
+            fs=fs,
+            wlen_sec=wlen_sec,
+            win=win, 
+            hop_percent=hop_percent,
+            center=center,
+            pad_mode=pad_mode,
+            pad_at_end=pad_at_end,
+            dtype=dtype) # shape = (freq_bins, frames)
+
+    # Input
+    s_t, fs_s = sf.read(processed_wav_dir + os.path.splitext(clean_file_path)[0] + '_s.wav') # mixture
+    
+    # TF representation (Librosa)
+    # Input should be (frames, freq_bins)
+    s_tf = stft(s_t,
             fs=fs,
             wlen_sec=wlen_sec,
             win=win, 
@@ -109,10 +124,12 @@ def process_utt(mcem, model, mean, std, clean_file_path, device):
     # Reduce frames of audio
     if v.shape[-1] < x_tf.shape[-1]:
         x_tf = x_tf[...,:v.shape[-1]]
+        s_tf = s_tf[...,:v.shape[-1]]
 
     # Init MCEM
     #TODO: if std_norm, include mean & std
     mcem.init_parameters(X=x_tf,
+                         S=s_tf,
                         vae=model,
                         nmf_rank=nmf_rank,
                         eps=eps,
@@ -127,7 +144,7 @@ def process_utt(mcem, model, mean, std, clean_file_path, device):
     # ISTFT
     # S_hat = S_hat[None] # 1channel
     # s_hat = istft_pytorch(S_hat,
-    s_hat = istft(x_tf,
+    s_hat = istft(S_hat,
                  fs=fs,
                  wlen_sec=wlen_sec,
                  win=win,
@@ -150,8 +167,14 @@ def process_utt(mcem, model, mean, std, clean_file_path, device):
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     
-    sf.write(output_path + '_s_est.wav', s_hat, fs)
-    sf.write(output_path + '_n_est.wav', n_hat, fs)
+    # sf.write(output_path + '_s_est.wav', s_hat, fs)
+    # sf.write(output_path + '_n_est.wav', n_hat, fs)
+
+    # sf.write(output_path + '_clean_z_s_est.wav', s_hat, fs)
+    # sf.write(output_path + '_clean_z_n_est.wav', n_hat, fs)
+
+    sf.write(output_path + '_clean_z_nomcem_s_est.wav', s_hat, fs)
+    sf.write(output_path + '_clean_z_nomcem_n_est.wav', n_hat, fs)
 
 def process_sublist(device, sublist, mcem, model):
 
