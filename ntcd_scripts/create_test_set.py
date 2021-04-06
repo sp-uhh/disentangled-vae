@@ -92,9 +92,6 @@ def process_save_utt(args):
 
     speech, fs_speech = sf.read(input_speech_dir + input_clean_file_path)
 
-    # Set burst at begining of file to 0
-    speech[:int(0.1*fs)] = 0.
-
     # Normalize audio
     speech = speech/(np.max(abs(speech)))
 
