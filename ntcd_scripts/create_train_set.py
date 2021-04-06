@@ -134,6 +134,9 @@ def main():
                 if fs != fs_speech:
                     raise ValueError('Unexpected sampling rate')
 
+                # Set burst at begining of file to 0
+                speech[:int(0.1*fs)] = 0.
+
                 # Normalize audio
                 speech = speech/(np.max(np.abs(speech)))
 

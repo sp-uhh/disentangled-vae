@@ -4,6 +4,7 @@ sys.path.append('.')
 import os
 import torch
 import pickle
+import h5py as h5
 from tqdm import tqdm
 import numpy as np
 from torch.utils.data import DataLoader
@@ -45,7 +46,7 @@ x_dim = 513
 y_dim = 1
 z_dim = 16
 h_dim = [128, 128]
-std_norm = False
+std_norm = True
 eps = 1e-8
 
 # Classifier
@@ -59,7 +60,7 @@ log_interval = 250
 start_epoch = 1
 end_epoch = 500
 
-model_name = 'ntcd_M2_VAD_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+model_name = 'ntcd_M2_VAD_normdataset_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
 # model_name = 'M2_VAD_hdim_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], z_dim, end_epoch)
 
 # Data directories

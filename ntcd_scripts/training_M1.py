@@ -4,6 +4,7 @@ sys.path.append('.')
 import os
 import torch
 import pickle
+import h5py as h5
 import numpy as np
 from tqdm import tqdm
 import math

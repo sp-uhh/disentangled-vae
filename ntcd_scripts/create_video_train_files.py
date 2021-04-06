@@ -2,7 +2,7 @@ import sys
 sys.path.append('.')
 
 import numpy as np
-import torch, torchaudio
+import soundfile as sf
 import os
 from tqdm import tqdm
 import math
@@ -15,7 +15,7 @@ import time
 from scipy.fftpack import idct
 import cv2
 
-from packages.processing.stft import stft_pytorch
+from packages.processing.stft import stft
 from packages.processing.video import preprocess_ntcd_matlab
 from packages.processing.target import clean_speech_VAD, clean_speech_IBM,\
                                 noise_robust_clean_speech_IBM # because clean audio is very noisy
@@ -29,8 +29,8 @@ if dataset_name == 'ntcd_timit':
 # dataset_types = ['train', 'validation']
 dataset_types = ['test']
 
-# dataset_size = 'subset'
-dataset_size = 'complete'
+dataset_size = 'subset'
+# dataset_size = 'complete'
 
 # Labels
 labels = 'vad_labels'
@@ -178,31 +178,31 @@ def process_write_video(args):
         # # # video = np.repeat(video[:,:,None],3,axis=2)
     
     # Read clean speech
-    speech, fs_speech = torchaudio.load(input_video_dir + input_clean_file_path)
-    speech = speech[0] # 1channel
+    speech, fs_speech = sf.read(input_video_dir + input_clean_file_path)
 
     if fs != fs_speech:
         raise ValueError('Unexpected sampling rate')
 
+    # Set burst at begining of file to 0
+    speech[:int(0.1*fs)] = 0.
+
     # Normalize audio
-    speech = speech / (torch.max(torch.abs(speech)))
+    speech = speech / (np.max(abs(speech)))
 
     # TF reprepsentation
-    speech_tf = stft_pytorch(speech,
-                    fs=fs,
-                    wlen_sec=wlen_sec,
-                    win=win, 
-                    hop_percent=hop_percent,
-                    center=center,
-                    pad_mode=pad_mode,
-                    pad_at_end=pad_at_end) # shape = (freq_bins, frames)
+    speech_tf = stft(speech,
+            fs=fs,
+            wlen_sec=wlen_sec,
+            win=win,
+            hop_percent=hop_percent,
+            center=center,
+            pad_mode=pad_mode,
+            pad_at_end=pad_at_end,
+            dtype=dtype) # shape = (freq_bins, frames)
     
-    # Real + j * Img
-    speech_tf = speech_tf[...,0].numpy() + 1j * speech_tf[...,1].numpy()        
-
     if labels == 'vad_labels':
         # Compute vad
-        speech_vad = clean_speech_VAD(speech.numpy(),
+        speech_vad = clean_speech_VAD(speech,
                                       fs=fs,
                                       wlen_sec=wlen_sec,
                                       hop_percent=hop_percent,

@@ -205,15 +205,18 @@ class MCEM_M2(EM):
 
         # self.vae.eval() # vae in eval mode
     
-    def init_parameters(self, X, y, vae, nmf_rank, eps, device):
+    def init_parameters(self, X, S, y, vae, nmf_rank, eps, device):
         if type(vae).__name__ == 'RVAE':
             raise NameError('MCEM algorithm only valid for FFNN VAE')
 
-        super().init_parameters(X=X, nmf_rank=nmf_rank, eps=eps, device=device)
+        super().init_parameters(X=X, S=S, nmf_rank=nmf_rank, eps=eps, device=device)
         self.vae = vae
-        self.y = torch.t(y)  # label
+        self.y = y  # label
         _, Z, _ = self.vae.encoder(torch.t(torch.cat([self.X_abs_2, self.y], dim=0)))
+        _, Zclean, _ = self.vae.encoder(torch.t(torch.cat([self.S_abs_2, self.y], dim=0)))
         self.Z = torch.t(Z) # Last draw of the latent variables, shape (L, N)
+        # self.Z = torch.t(Zclean) # Last draw of the latent variables, shape (L, N)
+        self.Zclean = torch.t(Zclean) # Last draw of the latent variables, shape (L, N)
         self.X_abs_2_t = self.X_abs_2.clone()
    
     def sample_posterior(self, Z, y, nsamples=10, burnin=30):
@@ -314,6 +317,7 @@ class MCEM_M2(EM):
         # sample from posterior
         Z_t, Z_y_t = self.sample_posterior(self.Z, self.y, self.nsamples_E_step, 
                                     self.burnin_E_step) # (N, R, L)
+        # Z_t, Z_y_t = torch.t(self.Zclean)[:,None], torch.t(torch.cat([self.Zclean, self.y], dim=0))[:,None]
         
         # update last draw
         #self.Z = self.tensor2np(torch.squeeze(Z_t[:,-1,:])).T
@@ -331,6 +335,7 @@ class MCEM_M2(EM):
             # sample from posterior
             Z_t, Z_y_t = self.sample_posterior(self.Z, self.y, self.nsamples_WF, 
                                         self.burnin_WF)
+            # Z_t, Z_y_t = torch.t(self.Zclean), torch.t(torch.cat([self.Zclean, self.y], dim=0))
             
             # compute variances
             #self.compute_Vs(Z_t)
@@ -463,11 +468,11 @@ class MCEM_M1(EM):
         # sample from posterior
         Z_t  = self.sample_posterior(self.Z, self.nsamples_E_step, 
                                     self.burnin_E_step) # (N, R, L)
+        # Z_t = torch.t(self.Zclean)[:,None]
         
         # update last draw
         #self.Z = self.tensor2np(torch.squeeze(Z_t[:,-1,:])).T
         self.Z = torch.t(torch.squeeze(Z_t[:,-1,:]))
-        # Z_t = torch.t(self.Zclean)
         
         # compute variances
         self.compute_Vs(Z_t)  

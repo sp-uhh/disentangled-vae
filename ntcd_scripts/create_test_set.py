@@ -20,8 +20,8 @@ if noise_dataset_name == 'qutnoise_databases':
 
 dataset_type = 'test'
 
-# dataset_size = 'subset'
-dataset_size = 'complete'
+dataset_size = 'subset'
+# dataset_size = 'complete'
 
 # Labels
 labels = 'vad_labels'
@@ -91,10 +91,9 @@ def process_save_utt(args):
     input_clean_file_path, output_clean_file_path, noise_type, snr_dB  = args[0], args[1], args[2], args[3]
 
     speech, fs_speech = sf.read(input_speech_dir + input_clean_file_path)
-    speech = speech[0] # 1channel
 
-    # Cut burst at begining of file
-    speech = speech[int(0.1*fs):]
+    # Set burst at begining of file to 0
+    speech[:int(0.1*fs)] = 0.
 
     # Normalize audio
     speech = speech/(np.max(abs(speech)))
@@ -159,7 +158,6 @@ def main():
         if os.path.exists(preprocessed_noise_path):
             
             noise_audio, fs_noise = sf.read(preprocessed_noise_path)
-            noise_audio = noise_audio[0] #1channel
 
             if fs != fs_noise:
                 raise ValueError('Unexpected sampling rate')
@@ -187,11 +185,11 @@ def main():
 
     t1 = time.perf_counter()
 
-    # with concurrent.futures.ThreadPoolExecutor(max_workers=None) as executor:
-    #     executor.map(process_save_utt, args)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=None) as executor:
+        executor.map(process_save_utt, args)
     
-    # Test script on 1 sublist
-    process_save_utt(args[0])
+    # # Test script on 1 sublist
+    # process_save_utt(args[0])
 
     t2 = time.perf_counter()
     print(f'Finished in {t2 - t1} seconds')
