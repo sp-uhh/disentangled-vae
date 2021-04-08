@@ -46,7 +46,7 @@ dtype = 'complex64'
 
 # Hyperparameters 
 # M1
-model_name = 'ntcd_M1_nonorm_hdim_128_128_zdim_016_end_epoch_500/M1_epoch_164_vloss_408.82'
+model_name = 'ntcd_M1_nonorm_hdim_128_128_zdim_016_end_epoch_500/M1_epoch_118_vloss_416.54'
 x_dim = 513 
 z_dim = 16
 h_dim = [128, 128]

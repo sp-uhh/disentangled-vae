@@ -20,12 +20,12 @@ if noise_dataset_name == 'qutnoise_databases':
 
 dataset_type = 'test'
 
-dataset_size = 'subset'
-# dataset_size = 'complete'
+# dataset_size = 'subset'
+dataset_size = 'complete'
 
 # Labels
-labels = 'vad_labels'
-# labels = 'ibm_labels'
+# labels = 'vad_labels'
+labels = 'ibm_labels'
 
 # ## Video
 # visual_frame_rate_i = 30 # initial visual frames per second

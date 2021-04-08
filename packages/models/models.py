@@ -216,3 +216,26 @@ class DeepGenerativeModel(VariationalAutoencoder):
         x = self.decoder(torch.cat([z, y], dim=1))
         return x
 
+class DeepGenerativeModel_v2(VariationalAutoencoder):
+    def __init__(self, dims, classifier):
+        [x_dim, self.y_dim, z_dim, h_dim] = dims
+        super(DeepGenerativeModel_v2, self).__init__([x_dim, z_dim, h_dim])
+
+        self.encoder = Encoder([x_dim, h_dim, z_dim])
+        self.decoder = Decoder([z_dim + self.y_dim, list(reversed(h_dim)), x_dim])
+
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                init.xavier_normal_(m.weight.data)
+                if m.bias is not None:
+                    m.bias.data.zero_()
+
+    def forward(self, x, y):
+        z, z_mu, z_log_var = self.encoder(x)
+        x_mu = self.decoder(torch.cat([z, y], dim=1))
+        return x_mu, z_mu, z_log_var
+
+    def sample(self, z, y):
+        y = y.float()
+        x = self.decoder(torch.cat([z, y], dim=1))
+        return x
