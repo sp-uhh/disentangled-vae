@@ -54,6 +54,7 @@ def log_sum_exp(tensor, dim=-1, sum_op=torch.sum):
 
 def binary_cross_entropy(r, x, eps):
     return -torch.mean(torch.sum(x*torch.log(r + eps) + (1 - x)*torch.log(1 - r + eps), dim=-1))
+    # return -torch.mean(torch.sum(x*torch.log(torch.sigmoid(r)) + (1 - x)*torch.log(1 - torch.sigmoid(r)), dim=-1))
 
 def binary_cross_entropy_2classes(r1, r2, x, eps):
     return -torch.mean(torch.sum(x*torch.log(r1 + eps) + (1 - x)*torch.log(r2 + eps), dim=-1))
@@ -78,17 +79,24 @@ def U_loss(x, r, mu, logvar, y_hat_soft, eps):
     KL = -0.5 * torch.sum(logvar - mu.pow(2) - logvar.exp(), dim=-1)
 
     L = recon + KL
-    L = L.view_as(y_hat_soft.t()).t()
+    # L = L.view_as(y_hat_soft.t()).t()
+    L = L[...,None]
+
+    # Calculate L_soft
+    L_soft = torch.sum(torch.mul(y_hat_soft, L) + torch.mul(1-y_hat_soft, L), dim=-1)
+    # L_soft = torch.sum(torch.mul(torch.sigmoid(y_hat_soft), L) + torch.mul(1-torch.sigmoid(y_hat_soft), L), dim=-1)
 
     # Calculate entropy H(q(y|x)) and sum over all labels
-    H = -torch.mul(y_hat_soft, torch.log(y_hat_soft + eps)) - torch.mul(1-y_hat_soft, torch.log(1-y_hat_soft + eps))
-    L_soft = torch.sum(torch.mul(y_hat_soft, L), dim=-1)
+    H = -torch.sum(torch.mul(y_hat_soft, torch.log(y_hat_soft + eps)) + torch.mul(1-y_hat_soft, torch.log(1-y_hat_soft + eps)), dim=-1)
+    # H = -torch.mul(torch.sigmoid(y_hat_soft), torch.log(torch.sigmoid(y_hat_soft))) - torch.mul(1-torch.sigmoid(y_hat_soft), torch.log(1-torch.sigmoid(y_hat_soft)), dim=-1)
 
     # Equivalent to U(x)
     #U = torch.mean(L + H[:,0]) # wrong sign
-    U = torch.mean(L_soft - H[:,0])
+    U = torch.mean(L_soft + H)
     L = torch.mean(L)
-    return U, L, torch.mean(recon), torch.mean(KL)
+    recon = torch.mean(recon)
+    KL = torch.mean(KL)
+    return U, L, recon, KL
 
 def mean_square_error_signal(x, y, y_hat):
     #MSE = torch.mean(torch.square(torch.mul(y - y_hat, x)))

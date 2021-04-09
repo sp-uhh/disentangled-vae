@@ -11,8 +11,8 @@ from torch.utils.data import DataLoader
 
 from packages.utils import count_parameters
 from packages.data_handling import HDF5CleanSpectrogramLabeledFrames
-from packages.models.models import DeepGenerativeModel_v2
-from packages.models.utils import elbo
+from packages.models.models import DeepGenerativeModel_v3
+from packages.models.utils import U_loss, binary_cross_entropy
 
 ##################################### SETTINGS #####################################################
 
@@ -50,7 +50,7 @@ std_norm = False
 eps = 1e-8
 
 # Classifier
-classifier = None
+alpha = 0.
 
 # Training
 batch_size = 128
@@ -60,7 +60,8 @@ log_interval = 250
 start_epoch = 1
 end_epoch = 500
 
-model_name = 'ntcd_M2v2_VAD_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+# model_name = 'ntcd_M2v3_VAD_Uloss_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+model_name = 'ntcd_M2v3_VAD_Uloss_alpha_0.0_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
 
 # Data directories
 input_video_dir = os.path.join('data', dataset_size, 'processed/')
@@ -91,8 +92,7 @@ print('- Number of validation batches: {}'.format(len(valid_loader)))
 
 def main():
     print('Create model')
-    model = DeepGenerativeModel_v2([x_dim, y_dim, z_dim, h_dim], classifier)
-    
+    model = DeepGenerativeModel_v3([x_dim, y_dim, z_dim, h_dim])
     if cuda: model = model.to(device, non_blocking=non_blocking)
 
     # Create model folder
@@ -122,80 +122,97 @@ def main():
     print('Start training')
     for epoch in range(start_epoch, end_epoch):
         model.train()
-        total_elbo, total_likelihood, total_kl = (0, 0, 0)
+        total_loss, total_U, total_likelihood, total_kl, total_classif = (0, 0, 0, 0, 0)
         for batch_idx, (x, y) in tqdm(enumerate(train_loader)):
             if cuda:
                 x, y = x.to(device, non_blocking=non_blocking), y.to(device, non_blocking=non_blocking)
 
-            if std_norm:
-                x_norm = x - mean.T
-                x_norm /= (std + eps).T
+            # Enumerate choices of label
+            y0 = torch.zeros((x.size(0), y_dim)).to(device)
+            y1 = torch.ones((x.size(0), y_dim)).to(device)
+            y01 = torch.cat([y0,y1], dim=0)
+            x = x.repeat(len([y0,y1]), 1)
+            y = y.repeat(len([y0,y1]), 1)
 
-                r, mu, logvar = model(x_norm, y)
-            else:
-                r, mu, logvar = model(x, y)
+            y_hat_soft = model.classify(x)
+            r, mu, logvar = model(x, y_hat_soft)
+
+            U, L, recon_loss, KL = U_loss(x, r, mu, logvar, y_hat_soft, eps)
             
-            loss, recon_loss, KL = elbo(x, r, mu, logvar, eps)
+            # Add - alpha * BCE
+            classif_loss = alpha * binary_cross_entropy(y, y_hat_soft, eps)
+            loss = U - classif_loss
+
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
 
-            total_elbo += loss.item()
+            total_loss += loss.item()
+            total_U += U.item()
             total_likelihood += recon_loss.item()
             total_kl += KL.item()
+            total_classif += classif_loss.item()
 
             # Save to log
             if batch_idx % log_interval == 0:
                 print(('Train Epoch: {:2d}   [{:7d}/{:7d} ({:2d}%)]    '\
-                    'ELBO: {:.3f}    Recon.: {:.3f}    KL: {:.3f}    '\
+                    'Total: {:.10f}    U: {:.10f}    Recon.: {:.3f}    KL: {:.3f}    Classif.: {:.3f}    '\
                     + '').format(epoch, batch_idx*len(x), len(train_loader.dataset), int(100.*batch_idx/len(train_loader)),\
-                            loss.item(), recon_loss.item(), KL.item()), 
+                            loss.item(), U.item(), recon_loss.item(), KL.item(), classif_loss.item()), 
                     file=open(model_dir + '/' + 'output_batch.log','a'))
 
         if epoch % 1 == 0:
             model.eval()
 
             print("Epoch: {}".format(epoch))
-            print("[Train]\t\t ELBO: {:.2f}, Recon.: {:.2f}, KL: {:.2f}"\
-                "".format(total_elbo / t, total_likelihood / t, total_kl / t))
+            print("[Train]\t\t Total: {:.3f}, U: {:.3f}, Recon.: {:.3f}, KL: {:.3f}, Classif.: {:.3f}"\
+                "".format(total_loss / t, total_U / t, total_likelihood / t, total_kl / t, total_classif / t))
 
             # Save to log
             print(("Epoch: {}".format(epoch)), file=open(model_dir + '/' + 'output_epoch.log','a'))
-            print(("[Train]\t\t ELBO: {:.2f}, Recon.: {:.2f}, KL: {:.2f}"\
-                "".format(total_elbo / t, total_likelihood / t, total_kl / t)),
+            print(("[Train]\t\t Total: {:.3f}, U: {:.3f}, Recon.: {:.3f}, KL: {:.3f}, Classif.: {:.3f}"\
+                "".format(total_loss / t, total_U / t, total_likelihood / t, total_kl / t, total_classif / t)),
                 file=open(model_dir + '/' + 'output_epoch.log','a'))
 
-            total_elbo, total_likelihood, total_kl = (0, 0, 0)
+            total_loss, total_U, total_likelihood, total_kl, total_classif = (0, 0, 0, 0, 0)
 
-            for batch_idx, (x, y) in enumerate(valid_loader):
+            for batch_idx, (x, y) in tqdm(enumerate(valid_loader)):
 
                 if cuda:
                     x, y = x.to(device, non_blocking=non_blocking), y.to(device, non_blocking=non_blocking)
 
-                if std_norm:
-                    x_norm = x - mean.T
-                    x_norm /= (std + eps).T
+                # Enumerate choices of label
+                y0 = torch.zeros((x.size(0), y_dim)).to(device)
+                y1 = torch.ones((x.size(0), y_dim)).to(device)
+                y01 = torch.cat([y0,y1], dim=0)
+                x = x.repeat(len([y0,y1]), 1)
+                y = y.repeat(len([y0,y1]), 1)
 
-                    r, mu, logvar = model(x_norm, y)
-                else:
-                    r, mu, logvar = model(x, y)
+                y_hat_soft = model.classify(x)
+                r, mu, logvar = model(x, y_hat_soft)
 
-                loss, recon_loss, KL = elbo(x, r, mu, logvar, eps)
+                U, L, recon_loss, KL = U_loss(x, r, mu, logvar, y_hat_soft, eps)
 
-                total_elbo += loss.item()
+                # Add - alpha * BCE
+                classif_loss = alpha * binary_cross_entropy(y, y_hat_soft, eps)
+                loss = U - classif_loss
+
+                total_loss += loss.item()
+                total_U += U.item()
                 total_likelihood += recon_loss.item()
                 total_kl += KL.item()
+                total_classif += classif_loss.item()
   
-            print("[Validation]\t ELBO: {:.2f}, Recon.: {:.2f}, KL: {:.2f}"\
-                "".format(total_elbo / m, total_likelihood / m, total_kl / m))
+            print("[Validation]\t Total: {:.3f}, U: {:.3f}, Recon.: {:.3f}, KL: {:.3f}, Classif.: {:.3f}"\
+                "".format(total_loss / m, total_U / m, total_likelihood / m, total_kl / m, total_classif / m))
 
-            print(("[Validation]\t ELBO: {:.2f}, Recon.: {:.2f}, KL: {:.2f}"\
-                "".format(total_elbo / m, total_likelihood / m, total_kl / m)),
+            print(("[Validation]\t Total: {:.3f}, U: {:.3f}, Recon.: {:.3f}, KL: {:.3f}, Classif.: {:.3f}"\
+                "".format(total_loss / m, total_U / m, total_likelihood / m, total_kl / m, total_classif / m)),
                 file=open(model_dir + '/' + 'output_epoch.log','a'))
 
             # Save model
             torch.save(model.state_dict(), model_dir + '/' + 'M2_epoch_{:03d}_vloss_{:.2f}.pt'.format(
-                epoch, total_elbo / m))
+                epoch, total_loss / m))
             
 if __name__ == '__main__':
     main()

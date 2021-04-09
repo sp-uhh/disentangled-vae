@@ -59,6 +59,7 @@ class Classifier(nn.Module):
         for layer in self.hidden:
             x = torch.relu(layer(x))
         y = torch.sigmoid(self.output_layer(x))
+        # y = self.output_layer(x)
         return y
 
 class Classifier2Classes(nn.Module):
@@ -236,6 +237,58 @@ class DeepGenerativeModel_v2(VariationalAutoencoder):
         return x_mu, z_mu, z_log_var
 
     def sample(self, z, y):
+        y = y.float()
+        x = self.decoder(torch.cat([z, y], dim=1))
+        return x
+
+
+class DeepGenerativeModel_v3(VariationalAutoencoder):
+    def __init__(self, dims):
+        """
+        M2 code replication from the paper
+        'Semi-Supervised Learning with Deep Generative Models'
+        (Kingma 2014) in PyTorch.
+
+        The "Generative semi-supervised model" is a probabilistic
+        model that incorporates label information in both
+        inference and generation.
+
+        Initialise a new generative model
+        :param dims: dimensions of x, y, z and hidden layers.
+        """
+        [x_dim, self.y_dim, z_dim, h_dim] = dims
+        super(DeepGenerativeModel_v3, self).__init__([x_dim, z_dim, h_dim])
+
+        self.encoder = Encoder([x_dim, h_dim, z_dim])
+        self.decoder = Decoder([z_dim + self.y_dim, list(reversed(h_dim)), x_dim])
+        self.classifier = Classifier([x_dim, h_dim, self.y_dim])
+
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                init.xavier_normal_(m.weight.data)
+                if m.bias is not None:
+                    m.bias.data.zero_()
+
+    def classify(self, x):
+        y = self.classifier(x)
+        return y
+
+    def forward(self, x, y):
+        # Add label and data and generate latent variable
+        z, z_mu, z_log_var = self.encoder(x)
+
+        # Reconstruct data point from latent data and label
+        x_mu = self.decoder(torch.cat([z, y], dim=1))
+
+        return x_mu, z_mu, z_log_var
+
+    def sample(self, z, y):
+        """
+        Samples from the Decoder to generate an x.
+        :param z: latent normal variable
+        :param y: label (one-hot encoded)
+        :return: x
+        """
         y = y.float()
         x = self.decoder(torch.cat([z, y], dim=1))
         return x
