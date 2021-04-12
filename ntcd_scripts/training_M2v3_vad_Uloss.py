@@ -50,7 +50,7 @@ std_norm = False
 eps = 1e-8
 
 # Classifier
-alpha = 0.
+alpha = 20.
 
 # Training
 batch_size = 128
@@ -61,7 +61,12 @@ start_epoch = 1
 end_epoch = 500
 
 # model_name = 'ntcd_M2v3_VAD_Uloss_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-model_name = 'ntcd_M2v3_VAD_Uloss_alpha_0.0_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+# model_name = 'ntcd_M2v3_VAD_Uloss_alpha_0.0_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+# model_name = 'ntcd_M2v3_VAD_Uloss_alpha_0.0_hardlabel_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+# model_name = 'ntcd_M2v3_VAD_Uloss_alpha_10.0_hardlabel_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+# model_name = 'ntcd_M2v3_VAD_Uloss_alpha_-10.0_hardlabel_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+# model_name = 'ntcd_M2v3_VAD_Uloss_alpha_-100.0_hardlabel_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+model_name = 'ntcd_M2v3_VAD_Uloss_alpha_20.0_hardlabel_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
 
 # Data directories
 input_video_dir = os.path.join('data', dataset_size, 'processed/')
@@ -135,7 +140,9 @@ def main():
             y = y.repeat(len([y0,y1]), 1)
 
             y_hat_soft = model.classify(x)
-            r, mu, logvar = model(x, y_hat_soft)
+            y_hat_hard = (y_hat_soft > 0.5)
+            # r, mu, logvar = model(x, y_hat_soft)
+            r, mu, logvar = model(x, y_hat_hard)
 
             U, L, recon_loss, KL = U_loss(x, r, mu, logvar, y_hat_soft, eps)
             
@@ -189,7 +196,9 @@ def main():
                 y = y.repeat(len([y0,y1]), 1)
 
                 y_hat_soft = model.classify(x)
-                r, mu, logvar = model(x, y_hat_soft)
+                y_hat_hard = (y_hat_soft > 0.5)
+                # r, mu, logvar = model(x, y_hat_soft)
+                r, mu, logvar = model(x, y_hat_hard)
 
                 U, L, recon_loss, KL = U_loss(x, r, mu, logvar, y_hat_soft, eps)
 
