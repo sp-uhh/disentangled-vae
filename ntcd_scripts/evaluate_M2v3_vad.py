@@ -60,7 +60,13 @@ if labels == 'vad_labels':
     # model_name = 'ntcd_M2v3_VAD_Uloss_alpha_0.0_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_145_vloss_406.27'
     # model_name = 'ntcd_M2v3_VAD_Uloss_alpha_0.0_hardlabel_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_181_vloss_398.22'
     # model_name = 'ntcd_M2v3_VAD_Uloss_alpha_10.0_hardlabel_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_169_vloss_226.01'
-    model_name = 'ntcd_M2v3_VAD_Uloss_alpha_-10.0_hardlabel_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_174_vloss_408.30'
+    # model_name = 'ntcd_M2v3_VAD_Uloss_alpha_-10.0_hardlabel_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_174_vloss_408.30'
+    # model_name = 'ntcd_M2v3_VAD_Uloss_alpha_20.0_hardlabel_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_111_vloss_58.46'
+    # model_name = 'ntcd_M2v3_VAD_Uloss_alpha_-100.0_hardlabel_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_151_vloss_462.83'
+    # model_name = 'ntcd_M2v3_VAD_Uloss_alpha_20.0_ytrue_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_208_vloss_47.56'
+    # model_name = 'ntcd_M2v3_VAD_Uloss_alpha_20.0_yhathard_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_108_vloss_60.84'
+    # model_name = 'ntcd_M2v3_VAD_Lloss_alpha_20.0_yhathard_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_084_vloss_69.94'
+    model_name = 'ntcd_M2v3_VAD_Lloss_alpha_-1000.0_yhathard_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_077_vloss_947.59'
     x_dim = 513
     y_dim = 1
     z_dim = 16
@@ -173,6 +179,8 @@ def process_utt(mcem, model, classifier, mean, std, clean_file_path, device):
         #y_hat_soft = np.ones(s_tf.shape[1], dtype='float32')[None]
         # y_hat_soft = np.zeros(s_tf.shape[1], dtype='float32')[None]
         y_hat_hard = torch.Tensor(y).to(device)
+        y_hat_hard = torch.zeros_like(y_hat_hard).to(device)
+        # y_hat_hard = torch.ones_like(y_hat_hard).to(device)
 
     # Reduce frames of audio & label
     if v.shape[-1] < x_tf.shape[-1]:
@@ -225,8 +233,14 @@ def process_utt(mcem, model, classifier, mean, std, clean_file_path, device):
     # sf.write(output_path + '_s_est.wav', s_hat, fs)
     # sf.write(output_path + '_n_est.wav', n_hat, fs)
 
-    sf.write(output_path + '_s_est_oracle_y.wav', s_hat, fs)
-    sf.write(output_path + '_n_est_oracle_y.wav', n_hat, fs)
+    # sf.write(output_path + '_s_est_oracle_y.wav', s_hat, fs)
+    # sf.write(output_path + '_n_est_oracle_y.wav', n_hat, fs)
+
+    sf.write(output_path + '_s_est_oracle_0.wav', s_hat, fs)
+    sf.write(output_path + '_n_est_oracle_0.wav', n_hat, fs)
+
+    # sf.write(output_path + '_s_est_oracle_1.wav', s_hat, fs)
+    # sf.write(output_path + '_n_est_oracle_1.wav', n_hat, fs)
 
     # sf.write(output_path + '_clean_z_s_est.wav', s_hat, fs)
     # sf.write(output_path + '_clean_z_n_est.wav', n_hat, fs)

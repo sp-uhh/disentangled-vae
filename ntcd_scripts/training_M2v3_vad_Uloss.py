@@ -50,7 +50,7 @@ std_norm = False
 eps = 1e-8
 
 # Classifier
-alpha = 20.
+alpha = -1000.
 
 # Training
 batch_size = 128
@@ -66,7 +66,12 @@ end_epoch = 500
 # model_name = 'ntcd_M2v3_VAD_Uloss_alpha_10.0_hardlabel_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
 # model_name = 'ntcd_M2v3_VAD_Uloss_alpha_-10.0_hardlabel_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
 # model_name = 'ntcd_M2v3_VAD_Uloss_alpha_-100.0_hardlabel_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-model_name = 'ntcd_M2v3_VAD_Uloss_alpha_20.0_hardlabel_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+# model_name = 'ntcd_M2v3_VAD_Uloss_alpha_20.0_hardlabel_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+# model_name = 'ntcd_M2v3_VAD_Uloss_alpha_20.0_ytrue_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+# model_name = 'ntcd_M2v3_VAD_Uloss_alpha_20.0_yhathard_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+# model_name = 'ntcd_M2v3_VAD_Lloss_alpha_20.0_yhathard_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+# model_name = 'ntcd_M2v3_VAD_Lloss_alpha_-10.0_yhathard_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+model_name = 'ntcd_M2v3_VAD_Lloss_alpha_-1000.0_yhathard_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
 
 # Data directories
 input_video_dir = os.path.join('data', dataset_size, 'processed/')
@@ -132,23 +137,28 @@ def main():
             if cuda:
                 x, y = x.to(device, non_blocking=non_blocking), y.to(device, non_blocking=non_blocking)
 
-            # Enumerate choices of label
-            y0 = torch.zeros((x.size(0), y_dim)).to(device)
-            y1 = torch.ones((x.size(0), y_dim)).to(device)
-            y01 = torch.cat([y0,y1], dim=0)
-            x = x.repeat(len([y0,y1]), 1)
-            y = y.repeat(len([y0,y1]), 1)
+            # # Enumerate choices of label
+            # y0 = torch.zeros((x.size(0), y_dim)).to(device)
+            # y1 = torch.ones((x.size(0), y_dim)).to(device)
+            # y01 = torch.cat([y0,y1], dim=0)
+            # x = x.repeat(len([y0,y1]), 1)
+            # y = y.repeat(len([y0,y1]), 1)
 
             y_hat_soft = model.classify(x)
-            y_hat_hard = (y_hat_soft > 0.5)
+
             # r, mu, logvar = model(x, y_hat_soft)
+
+            y_hat_hard = (y_hat_soft > 0.5)
             r, mu, logvar = model(x, y_hat_hard)
+            
+            # r, mu, logvar = model(x, y)
 
             U, L, recon_loss, KL = U_loss(x, r, mu, logvar, y_hat_soft, eps)
             
             # Add - alpha * BCE
             classif_loss = alpha * binary_cross_entropy(y, y_hat_soft, eps)
-            loss = U - classif_loss
+            # loss = U - classif_loss
+            loss = L - classif_loss
 
             loss.backward()
             optimizer.step()
@@ -188,23 +198,28 @@ def main():
                 if cuda:
                     x, y = x.to(device, non_blocking=non_blocking), y.to(device, non_blocking=non_blocking)
 
-                # Enumerate choices of label
-                y0 = torch.zeros((x.size(0), y_dim)).to(device)
-                y1 = torch.ones((x.size(0), y_dim)).to(device)
-                y01 = torch.cat([y0,y1], dim=0)
-                x = x.repeat(len([y0,y1]), 1)
-                y = y.repeat(len([y0,y1]), 1)
+                # # Enumerate choices of label
+                # y0 = torch.zeros((x.size(0), y_dim)).to(device)
+                # y1 = torch.ones((x.size(0), y_dim)).to(device)
+                # y01 = torch.cat([y0,y1], dim=0)
+                # x = x.repeat(len([y0,y1]), 1)
+                # y = y.repeat(len([y0,y1]), 1)
 
                 y_hat_soft = model.classify(x)
-                y_hat_hard = (y_hat_soft > 0.5)
+                
                 # r, mu, logvar = model(x, y_hat_soft)
+
+                y_hat_hard = (y_hat_soft > 0.5)
                 r, mu, logvar = model(x, y_hat_hard)
+                
+                # r, mu, logvar = model(x, y)
 
                 U, L, recon_loss, KL = U_loss(x, r, mu, logvar, y_hat_soft, eps)
 
                 # Add - alpha * BCE
                 classif_loss = alpha * binary_cross_entropy(y, y_hat_soft, eps)
-                loss = U - classif_loss
+                # loss = U - classif_loss
+                loss = L - classif_loss
 
                 total_loss += loss.item()
                 total_U += U.item()

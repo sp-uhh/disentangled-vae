@@ -214,11 +214,14 @@ def process_utt(mcem, model, classifier, mean, std, clean_file_path, device):
     # sf.write(output_path + '_s_est.wav', s_hat, fs)
     # sf.write(output_path + '_n_est.wav', n_hat, fs)
 
+    sf.write(output_path + '_s_est_oracle_y.wav', s_hat, fs)
+    sf.write(output_path + '_n_est_oracle_y.wav', n_hat, fs)
+
     # sf.write(output_path + '_clean_z_s_est.wav', s_hat, fs)
     # sf.write(output_path + '_clean_z_n_est.wav', n_hat, fs)
 
-    sf.write(output_path + '_clean_z_nomcem_s_est.wav', s_hat, fs)
-    sf.write(output_path + '_clean_z_nomcem_n_est.wav', n_hat, fs)
+    # sf.write(output_path + '_clean_z_nomcem_s_est.wav', s_hat, fs)
+    # sf.write(output_path + '_clean_z_nomcem_n_est.wav', n_hat, fs)
 
     # end_file = time.time()
     # elapsed.append(end_file - start_file)
