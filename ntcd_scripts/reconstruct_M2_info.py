@@ -78,7 +78,10 @@ if labels == 'vad_labels':
     # model_name = 'ntcd_M2_info_VAD_Lenc_aux_v1_alpha_0.0_beta_1.0_y_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_161_vloss_409.56'
     # model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_10.0_gamma_1.0_yhatsoft_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_158_vloss_393.75'
     # model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_1.0_beta_10.0_gamma_1.0_yhatsoft_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_179_vloss_388.52'
-    model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_1.0_gamma_1.0_yhatsoft_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_177_vloss_397.30'
+    # model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_1.0_gamma_1.0_yhatsoft_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_177_vloss_397.30'
+    # model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_-1.0_beta_1.0_gamma_1.0_yhatsoft_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_144_vloss_389.11'
+    # model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_100.0_beta_1.0_gamma_1.0_yhatsoft_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_164_vloss_407.32'
+    model_name = 'ntcd_M2_info_VAD_Lenc_aux_v1_alpha_0.0_beta_10.0_gamma_1.0_y_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_172_vloss_401.92'
     x_dim = 513
     y_dim = 1
     z_dim = 16

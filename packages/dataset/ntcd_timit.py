@@ -247,7 +247,7 @@ def noisy_speech_dict(input_speech_dir,
 
     if dataset_size == 'subset':
         # List of noise types
-        noise_types = ['Babble']
+        noise_types = ['Babble', 'LR']
 
         # List of SNRs
         snrs = ['-5']
@@ -351,7 +351,7 @@ def noisy_clean_pair_dict(input_speech_dir,
 
     if dataset_size == 'subset':
         # List of noise types
-        noise_types = ['Babble']
+        noise_types = ['Babble', 'LR']
 
         # List of SNRs
         snrs = ['-5']
@@ -444,7 +444,7 @@ def proc_noisy_clean_pair_dict(input_speech_dir,
 
     if dataset_size == 'subset':
         # List of noise types
-        noise_types = ['Babble']
+        noise_types = ['Babble', 'LR']
 
         # List of SNRs
         snrs = ['-5']

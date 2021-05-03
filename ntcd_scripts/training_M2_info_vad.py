@@ -50,8 +50,8 @@ std_norm = False
 eps = 1e-8
 
 # Classifier
-alpha = 100.
-beta = 1.
+alpha = 0.
+beta = 10.
 gamma = 1.
 
 # Training
@@ -82,7 +82,9 @@ end_epoch = 500
 # model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_1.0_beta_10.0_gamma_1.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
 # model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_1.0_gamma_1.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
 # model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_-1.0_beta_1.0_gamma_1.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_100.0_beta_1.0_gamma_1.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_100.0_beta_1.0_gamma_1.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_1.0_beta_1.0_gamma_1.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+model_name = 'ntcd_M2_info_VAD_Lenc_aux_v1_alpha_0.0_beta_10.0_gamma_1.0_y_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
 
 # Data directories
 input_video_dir = os.path.join('data', dataset_size, 'processed/')
@@ -155,8 +157,8 @@ def main():
             # Compute all variables & losses
             # ELBO, rec_loss, KL
             y_hat_class_soft = model.classify_fromX(x)
-            r, z, mu, logvar = model(x, y_hat_class_soft)
-            # r, z, mu, logvar = model(x, y)
+            # r, z, mu, logvar = model(x, y_hat_class_soft)
+            r, z, mu, logvar = model(x, y)
             ELBO, recon_loss, KL = elbo(x, r, mu, logvar, eps)
 
             # Add + alpha * BCE (Classifier)
@@ -165,9 +167,9 @@ def main():
             # Add - beta * BCE (Encoder)
             # Train the encoder to NOT predict y from z
             y_hat_aux_soft = model.classify_fromZ(z)
-            # aux_enc_loss = beta * binary_cross_entropy(y_hat_aux_soft, y, eps)
+            aux_enc_loss = beta * binary_cross_entropy(y_hat_aux_soft, y, eps)
             # aux_enc_loss = beta * binary_cross_entropy_v2(y_hat_aux_soft, eps)
-            aux_enc_loss = beta * binary_cross_entropy_v3(y_hat_aux_soft, eps)
+            # aux_enc_loss = beta * binary_cross_entropy_v3(y_hat_aux_soft, eps)
             
             # Encoder / Decoder loss
             # enc_loss = ELBO + classif_loss - aux_enc_loss
@@ -234,8 +236,8 @@ def main():
                 # Compute all variables & losses
                 # ELBO, rec_loss, KL
                 y_hat_class_soft = model.classify_fromX(x)
-                r, z, mu, logvar = model(x, y_hat_class_soft)
-                # r, z, mu, logvar = model(x, y)
+                # r, z, mu, logvar = model(x, y_hat_class_soft)
+                r, z, mu, logvar = model(x, y)
                 ELBO, recon_loss, KL = elbo(x, r, mu, logvar, eps)
 
                 # Add + alpha * BCE (Classifier)
@@ -244,9 +246,9 @@ def main():
                 # Add - beta * BCE (Encoder)
                 # Train the encoder to NOT predict y from z
                 y_hat_aux_soft = model.classify_fromZ(z)
-                # aux_enc_loss = beta * binary_cross_entropy(y_hat_aux_soft, y, eps)
+                aux_enc_loss = beta * binary_cross_entropy(y_hat_aux_soft, y, eps)
                 # aux_enc_loss = beta * binary_cross_entropy_v2(y_hat_aux_soft, eps)
-                aux_enc_loss = beta * binary_cross_entropy_v3(y_hat_aux_soft, eps)
+                # aux_enc_loss = beta * binary_cross_entropy_v3(y_hat_aux_soft, eps)
                 
                 # Encoder / Decoder loss
                 # enc_loss = ELBO + classif_loss - aux_enc_loss
