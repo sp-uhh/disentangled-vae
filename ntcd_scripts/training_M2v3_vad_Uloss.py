@@ -156,7 +156,7 @@ def main():
             U, L, recon_loss, KL = U_loss(x, r, mu, logvar, y_hat_soft, eps)
             
             # Add - alpha * BCE
-            classif_loss = alpha * binary_cross_entropy(y, y_hat_soft, eps)
+            classif_loss = alpha * binary_cross_entropy(y_hat_soft, y, eps)
             # loss = U - classif_loss
             loss = L - classif_loss
 
@@ -217,7 +217,7 @@ def main():
                 U, L, recon_loss, KL = U_loss(x, r, mu, logvar, y_hat_soft, eps)
 
                 # Add - alpha * BCE
-                classif_loss = alpha * binary_cross_entropy(y, y_hat_soft, eps)
+                classif_loss = alpha * binary_cross_entropy(y_hat_soft, y, eps)
                 # loss = U - classif_loss
                 loss = L - classif_loss
 

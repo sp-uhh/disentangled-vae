@@ -483,9 +483,9 @@ class MCEM_M2(EM):
         
         if sample:
             # sample from posterior
-            Z_t, Z_y_t = self.sample_posterior(self.Z, self.y, self.nsamples_WF, 
-                                        self.burnin_WF)
-            # Z_t, Z_y_t = torch.t(self.Zclean), torch.t(torch.cat([self.Zclean, self.y], dim=0))
+            # Z_t, Z_y_t = self.sample_posterior(self.Z, self.y, self.nsamples_WF, 
+            #                             self.burnin_WF)
+            Z_t, Z_y_t = torch.t(self.Zclean), torch.t(torch.cat([self.Zclean, self.y], dim=0))
             
             # compute variances
             #self.compute_Vs(Z_t)
@@ -809,9 +809,9 @@ class MCEM_M2v3(EM):
         """
 
         # # sample from posterior
-        # Z_t, Z_y_t = self.sample_posterior(self.Z, self.y, self.nsamples_E_step, 
-        #                             self.burnin_E_step) # (N, R, L)
-        Z_t, Z_y_t = torch.t(self.Zclean)[:,None], torch.t(torch.cat([self.Zclean, self.y], dim=0))[:,None]
+        Z_t, Z_y_t = self.sample_posterior(self.Z, self.y, self.nsamples_E_step, 
+                                    self.burnin_E_step) # (N, R, L)
+        # Z_t, Z_y_t = torch.t(self.Zclean)[:,None], torch.t(torch.cat([self.Zclean, self.y], dim=0))[:,None]
         
         # update last draw
         #self.Z = self.tensor2np(torch.squeeze(Z_t[:,-1,:])).T
@@ -827,9 +827,9 @@ class MCEM_M2v3(EM):
         
         if sample:
             # # sample from posterior
-            # Z_t, Z_y_t = self.sample_posterior(self.Z, self.y, self.nsamples_WF, 
-            #                             self.burnin_WF)
-            Z_t, Z_y_t = torch.t(self.Zclean), torch.t(torch.cat([self.Zclean, self.y], dim=0))
+            Z_t, Z_y_t = self.sample_posterior(self.Z, self.y, self.nsamples_WF, 
+                                        self.burnin_WF)
+            # Z_t, Z_y_t = torch.t(self.Zclean), torch.t(torch.cat([self.Zclean, self.y], dim=0))
             
             # compute variances
             #self.compute_Vs(Z_t)

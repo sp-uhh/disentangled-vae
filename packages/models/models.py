@@ -242,7 +242,7 @@ class DeepGenerativeModel_v2(VariationalAutoencoder):
         return x
 
 
-class DeepGenerativeModel_v3(VariationalAutoencoder):
+class DeepGenerativeModel_v3(nn.Module):
     def __init__(self, dims):
         """
         M2 code replication from the paper
@@ -257,7 +257,10 @@ class DeepGenerativeModel_v3(VariationalAutoencoder):
         :param dims: dimensions of x, y, z and hidden layers.
         """
         [x_dim, self.y_dim, z_dim, h_dim] = dims
-        super(DeepGenerativeModel_v3, self).__init__([x_dim, z_dim, h_dim])
+        self.z_dim = z_dim
+        self.flow = None
+
+        super(DeepGenerativeModel_v3, self).__init__()
 
         self.encoder = Encoder([x_dim, h_dim, z_dim])
         self.decoder = Decoder([z_dim + self.y_dim, list(reversed(h_dim)), x_dim])
@@ -347,4 +350,95 @@ class DeepGenerativeModel_v4(VariationalAutoencoder):
         """
         y = y.float()
         x = self.decoder(torch.cat([z, y], dim=1))
+        return x
+
+class Encoder_Classifier(nn.Module):
+    def __init__(self, dims):
+        """
+        M2 code replication from the paper
+        'Semi-Supervised Learning with Deep Generative Models'
+        (Kingma 2014) in PyTorch.
+
+        The "Generative semi-supervised model" is a probabilistic
+        model that incorporates label information in both
+        inference and generation.
+
+        Initialise a new generative model
+        :param dims: dimensions of x, y, z and hidden layers.
+        """
+        [x_dim, self.y_dim, z_dim, h_dim] = dims
+        super(Encoder_Classifier, self).__init__()
+
+        self.encoder = Encoder([x_dim, h_dim, z_dim])
+        self.classifier = Classifier([x_dim, h_dim, self.y_dim])
+
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                init.xavier_normal_(m.weight.data)
+                if m.bias is not None:
+                    m.bias.data.zero_()
+
+    def classify(self, x):
+        y = self.classifier(x)
+        return y
+
+    def forward(self, x):
+        # Add label and data and generate latent variable
+        z, z_mu, z_log_var = self.encoder(x)
+        return z, z_mu, z_log_var
+
+class DeepGenerativeModel_v5(nn.Module):
+    def __init__(self, dims):
+        """
+        M2 code replication from the paper
+        'Semi-Supervised Learning with Deep Generative Models'
+        (Kingma 2014) in PyTorch.
+
+        The "Generative semi-supervised model" is a probabilistic
+        model that incorporates label information in both
+        inference and generation.
+
+        Initialise a new generative model
+        :param dims: dimensions of x, y, z and hidden layers.
+        """
+        [x_dim, self.y_dim, z_dim, h_dim] = dims
+        super(DeepGenerativeModel_v5, self).__init__()
+        
+        # self.encoder_classifier = Encoder_Classifier([x_dim, self.y_dim, z_dim, h_dim])
+        self.enc_dec_clf = DeepGenerativeModel_v3([x_dim, self.y_dim, z_dim, h_dim])
+        # self.decoder = Decoder([z_dim + self.y_dim, list(reversed(h_dim)), x_dim])
+        self.auxiliary = Classifier([z_dim, h_dim, self.y_dim])
+
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                init.xavier_normal_(m.weight.data)
+                if m.bias is not None:
+                    m.bias.data.zero_()
+
+    def classify_fromX(self, x):
+        y = self.enc_dec_clf.classifier(x)
+        return y
+
+    def classify_fromZ(self, z):
+        y = self.auxiliary(z)
+        return y
+
+    def forward(self, x, y):
+        # Add label and data and generate latent variable
+        z, z_mu, z_log_var = self.enc_dec_clf.encoder(x)
+
+        # Reconstruct data point from latent data and label
+        x_mu = self.enc_dec_clf.decoder(torch.cat([z, y], dim=1))
+
+        return x_mu, z, z_mu, z_log_var
+
+    def sample(self, z, y):
+        """
+        Samples from the Decoder to generate an x.
+        :param z: latent normal variable
+        :param y: label (one-hot encoded)
+        :return: x
+        """
+        y = y.float()
+        x = self.enc_dec_clf.decoder(torch.cat([z, y], dim=1))
         return x

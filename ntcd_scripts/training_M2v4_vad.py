@@ -140,10 +140,10 @@ def main():
             ELBO, recon_loss, KL = elbo(x, r, mu, logvar, eps)
             
             # Add + alpha * BCE (Encoder)
-            classif_loss_class = alpha * binary_cross_entropy(y, y_hat_class_soft, eps)
+            classif_loss_class = alpha * binary_cross_entropy(y_hat_class_soft, y, eps)
             
             # Add - beta * BCE (Auxiliary)
-            classif_loss_aux = beta * binary_cross_entropy(y, y_hat_aux_soft, eps)
+            classif_loss_aux = beta * binary_cross_entropy(y_hat_aux_soft, y, eps)
             
             # Total loss
             loss = ELBO + classif_loss_class - classif_loss_aux
@@ -198,10 +198,10 @@ def main():
                 ELBO, recon_loss, KL = elbo(x, r, mu, logvar, eps)
                 
                 # Add + alpha * BCE (Encoder)
-                classif_loss_class = alpha * binary_cross_entropy(y, y_hat_class_soft, eps)
+                classif_loss_class = alpha * binary_cross_entropy(y_hat_class_soft, y, eps)
                 
                 # Add - beta * BCE (Auxiliary)
-                classif_loss_aux = beta * binary_cross_entropy(y, y_hat_aux_soft, eps)
+                classif_loss_aux = beta * binary_cross_entropy(y_hat_aux_soft, y, eps)
                 
                 # Total loss
                 loss = ELBO + classif_loss_class - classif_loss_aux
