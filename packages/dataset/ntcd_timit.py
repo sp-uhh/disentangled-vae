@@ -242,8 +242,8 @@ def noisy_speech_dict(input_speech_dir,
 
     # List of SNRs
     # snrs = ['-5', '0', '5', '10', '15', '20']
-    snrs = ['-5', '0', '5']
-    #TODO: snrs til -20dB
+    # snrs = ['-5', '0', '5']
+    snrs = ['-5', '0', '5', '10']
 
     if dataset_size == 'subset':
         # List of noise types
@@ -331,7 +331,9 @@ def noisy_clean_pair_dict(input_speech_dir,
 
     # List of SNRs
     # snrs = ['-5', '0', '5', '10', '15', '20']
-    snrs = ['-5', '0', '5']
+    # snrs = ['-5', '0', '5']
+    # snrs = ['-5', '0', '5', '10']
+    snrs = ['-5', '0', '5', '10','15']
     #TODO: snrs til -20dB
 
     # Clean dir
@@ -440,7 +442,9 @@ def proc_noisy_clean_pair_dict(input_speech_dir,
 
     # List of SNRs
     # snrs = ['-5', '0', '5', '10', '15', '20']
-    snrs = ['-5', '0', '5']
+    # snrs = ['-5', '0', '5']
+    # snrs = ['-5', '0', '5', '10']
+    snrs = ['-5', '0', '5', '10','15']
 
     if dataset_size == 'subset':
         # List of noise types

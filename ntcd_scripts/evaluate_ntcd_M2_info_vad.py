@@ -25,8 +25,8 @@ if speech_dataset_name == 'ntcd_timit':
 
 dataset_type = 'test'
 
-dataset_size = 'subset'
-# dataset_size = 'complete'
+# dataset_size = 'subset'
+dataset_size = 'complete'
 
 # Labels
 labels = 'vad_labels'
@@ -58,8 +58,13 @@ ibm_threshold = 50 # Hard threshold
 if labels == 'vad_labels':
     # model_name = 'ntcd_M2_info_VAD_alpha_10.0_beta_10.0_yhatsoft_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_135_vloss_397.11'
     # model_name = 'ntcd_M2_info_VAD_Lenc_aux_v2_alpha_10.0_beta_10.0_yhatsoft_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_189_vloss_407.67'
+    # model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_10.0_gamma_1.0_yhatsoft_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_158_vloss_393.75'
+    # model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_10.0_gamma_1.0_yhatsoft_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_128_vloss_397.24'
+    # model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_10.0_gamma_1.0_yhatsoft_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_176_vloss_391.68'
     # model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_10.0_yhatsoft_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_144_vloss_396.43'
-    model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_10.0_gamma_1.0_yhatsoft_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_158_vloss_393.75'
+    # model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_0.0_beta_10.0_y_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_172_vloss_401.92'
+    # model_name = 'ntcd_M2_info_VAD_alpha_10.0_beta_10.0_yhatsoft_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_135_vloss_397.11'
+    model_name = 'ntcd_M2_info_VAD_Lenc_aux_v1_alpha_0.0_beta_10.0_gamma_10.0_y_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_170_vloss_402.17'
     x_dim = 513
     y_dim = 1
     z_dim = 16
@@ -77,13 +82,17 @@ if labels == 'ibm_labels':
     eps = 1e-8
 
 ## Classifier
-# classif_type = 'dnn'
-classif_type = 'oracle'
+classif_type = 'dnn'
+# classif_type = 'oracle'
 
 if classif_type == 'oracle':
     classif_name = 'oracle_classif'
     # classif_name = 'ones_classif'
     # classif_name = 'zeros_classif'
+
+if classif_type == 'dnn':
+    classif_name = 'Video_Classifier_vad_noeps_upsampled_resnet_normvideo3_nopretrain_normimage_batch64_noseqlength_end_epoch_100/Video_Net_epoch_007_vloss_4.51'
+    # classif_name = 'AV_Classifier_vad_frozenResNet_upsampled_resnet_normvideo3_nopretrain_normimage_batch64_noseqlength_end_epoch_100/Video_Net_epoch_003_vloss_3.72'
 
 # NMF
 nmf_rank = 10
@@ -107,6 +116,7 @@ processed_data_dir = os.path.join('data',dataset_size,'processed/')
 processed_wav_dir = os.path.join('data', dataset_size, 'processed/')
 model_path = os.path.join('models', model_name + '.pt')
 output_data_dir = os.path.join('data', dataset_size, 'models', model_name + '/')
+classif_data_dir = os.path.join('data', 'complete', 'models', classif_name + '/')
 
 #####################################################################################################
 
@@ -179,6 +189,22 @@ def process_utt(mcem, model, classifier, mean, std,
         # y_hat_hard = torch.zeros_like(y_hat_hard).to(device)
         # y_hat_hard = torch.ones_like(y_hat_hard).to(device)
 
+    if classif_type == 'dnn':
+        # Read labels
+        h5_file_path = clean_file_path.replace('Clean', 'matlab_raw')
+        h5_file_path = clean_file_path.replace('Clean', 'matlab_raw')
+        h5_file_path = h5_file_path.replace('_' + labels, '')
+        
+        # h5_file_path = proc_noisy_file_path
+
+        h5_file_path = classif_data_dir + h5_file_path
+        h5_file_path = os.path.splitext(h5_file_path)[0] + '_y_hat_hard.pt'
+        # h5_file_path = os.path.splitext(h5_file_path)[0] + '_y_hat_soft.pt'
+
+        y_hat_hard = torch.load(h5_file_path)
+        y_hat_hard = y_hat_hard.float()
+        y_hat_hard = y_hat_hard.to(device)
+
     # Reduce frames of audio & label
     if v.shape[-1] < x_tf.shape[-1]:
         x_tf = x_tf[...,:v.shape[-1]]
@@ -233,8 +259,14 @@ def process_utt(mcem, model, classifier, mean, std,
     # sf.write(output_path + '_s_est_oracle_0.wav', s_hat, fs)
     # sf.write(output_path + '_n_est_oracle_0.wav', n_hat, fs)
 
-    sf.write(output_path + '_s_est_oracle_y.wav', s_hat, fs)
-    sf.write(output_path + '_n_est_oracle_y.wav', n_hat, fs)
+    # sf.write(output_path + '_s_est_oracle_y.wav', s_hat, fs)
+    # sf.write(output_path + '_n_est_oracle_y.wav', n_hat, fs)
+
+    sf.write(output_path + '_s_est_y_hat_hard.wav', s_hat, fs)
+    sf.write(output_path + '_n_est_y_hat_hard.wav', n_hat, fs)
+
+    # sf.write(output_path + '_s_est_y_hat_soft.wav', s_hat, fs)
+    # sf.write(output_path + '_n_est_y_hat_soft.wav', n_hat, fs)
 
     # sf.write(output_path + '_clean_z_s_est.wav', s_hat, fs)
     # sf.write(output_path + '_clean_z_n_est.wav', n_hat, fs)
@@ -291,8 +323,7 @@ def main():
     model.load_state_dict(torch.load(model_path, map_location="cpu"))
     model = model.enc_dec_clf # Exclude auxiliary from the model
 
-    if classif_type == 'oracle':
-        classifier = None
+    classifier = None
 
     print('- Number of learnable parameters: {}'.format(count_parameters(model)))
 
@@ -310,6 +341,10 @@ def main():
 
     # Convert dict to tuples
     noisy_clean_pair_paths = list(noisy_clean_pair_paths.items())
+
+    # Subset of level = 10 dB
+    noisy_clean_pair_paths = [[j[0], j[1]] for j in noisy_clean_pair_paths if j[0].split('/')[-4] == '10']
+    # noisy_clean_pair_paths = [[j[0], j[1]] for j in noisy_clean_pair_paths if j[0].split('/')[-4] in ['0', '5', '10']]
 
     # Split list in nb_devices * nb_processes_per_device
     b = np.array_split(noisy_clean_pair_paths, nb_devices*nb_process_per_device)

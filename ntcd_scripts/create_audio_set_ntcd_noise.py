@@ -24,8 +24,8 @@ if noise_dataset_name == 'ntcd_timit':
 ## Dataset
 dataset_types = ['test']
 
-dataset_size = 'subset'
-# dataset_size = 'complete'
+# dataset_size = 'subset'
+dataset_size = 'complete'
 
 # Labels
 labels = 'vad_labels'
@@ -126,11 +126,11 @@ def main():
 
             t1 = time.perf_counter()
 
-            for i, arg in tqdm(enumerate(args)):
-                process_write_noisy_audio(arg)
+            # for i, arg in tqdm(enumerate(args)):
+            #     process_write_noisy_audio(arg)
 
-            # with concurrent.futures.ProcessPoolExecutor(max_workers=None) as executor:
-            #     executor.map(process_write_noisy_audio, args)
+            with concurrent.futures.ProcessPoolExecutor(max_workers=None) as executor:
+                executor.map(process_write_noisy_audio, args)
 
             t2 = time.perf_counter()
             print(f'Finished in {t2 - t1} seconds')

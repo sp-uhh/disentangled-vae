@@ -483,9 +483,9 @@ class MCEM_M2(EM):
         
         if sample:
             # sample from posterior
-            # Z_t, Z_y_t = self.sample_posterior(self.Z, self.y, self.nsamples_WF, 
-            #                             self.burnin_WF)
-            Z_t, Z_y_t = torch.t(self.Zclean), torch.t(torch.cat([self.Zclean, self.y], dim=0))
+            Z_t, Z_y_t = self.sample_posterior(self.Z, self.y, self.nsamples_WF, 
+                                        self.burnin_WF)
+            # Z_t, Z_y_t = torch.t(self.Zclean), torch.t(torch.cat([self.Zclean, self.y], dim=0))
             
             # compute variances
             #self.compute_Vs(Z_t)
