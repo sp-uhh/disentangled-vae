@@ -13,6 +13,7 @@ import time
 import tempfile
 import h5py as h5
 from tqdm import tqdm
+import math
 
 from packages.processing.stft import stft, istft
 from packages.processing.target import clean_speech_IBM, clean_speech_VAD
@@ -56,9 +57,9 @@ pad_at_end = True # pad audio file at end to match same size after stft + istft
 dtype = 'complex64'
 
 ## Plot spectrograms
-vmin = -60 # in dB
-vmax = 0 # in dB
-xticks_sec = 2.0 # in seconds
+vmin = -40 # in dB
+vmax = 20 # in dB
+xticks_sec = 0.5 # in seconds
 fontsize = 30
 
 ## Stats
@@ -66,8 +67,8 @@ confidence = 0.95 # confidence interval
 eps = 1e-8
 
 # M1/M2
-model_name = 'ntcd_M1_nonorm_hdim_128_128_zdim_016_end_epoch_500/M1_epoch_118_vloss_416.54'
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_10.0_yhatsoft_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_144_vloss_396.43'
+# model_name = 'ntcd_M1_nonorm_hdim_128_128_zdim_016_end_epoch_500/M1_epoch_118_vloss_416.54'
+model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_10.0_yhatsoft_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_144_vloss_396.43'
 # model_name = 'ntcd_M2_VAD_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_118_vloss_407.90'
 # model_name = 'ntcd_M2_info_VAD_Lenc_aux_v1_alpha_0.0_beta_10.0_gamma_10.0_y_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_170_vloss_402.17'
 # model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_0.0_beta_10.0_y_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_172_vloss_401.92'
@@ -105,8 +106,8 @@ def compute_metrics_utt(args):
     # Read files
     s_t, fs_s = sf.read(processed_data_dir + clean_audio_path) # clean speech
     x_t, fs_x = sf.read(processed_data_dir + proc_noisy_file_path) # mixture
-    # s_hat_t, fs_s_hat = sf.read(model_data_dir + os.path.splitext(proc_noisy_file_path)[0] + '_s_est.wav') # est. speech
-    s_hat_t, fs_s_hat = sf.read(model_data_dir + os.path.splitext(proc_noisy_file_path)[0] + '_s_est_y_hat_hard.wav') # est. speech
+    s_hat_t, fs_s_hat = sf.read(model_data_dir + os.path.splitext(proc_noisy_file_path)[0] + '_s_est.wav') # est. speech
+    # s_hat_t, fs_s_hat = sf.read(model_data_dir + os.path.splitext(proc_noisy_file_path)[0] + '_s_est_y_hat_hard.wav') # est. speech
 
     # # Reduce time length if estimated signal is smaller
     # if len(s_hat_t) < len(s_t):
@@ -140,102 +141,102 @@ def compute_metrics_utt(args):
     # polqa_s_hat = polqa(s, s_t, fs)
     # all_polqa.append(polqa_s_hat)
 
-    # ## F1 score
-    # # ideal binary mask
-    # h5_file_path = clean_file_path.replace('Clean', 'matlab_raw')
-    # h5_file_path = h5_file_path.replace('_' + labels, '')
-    # y_hat_hard = torch.load(classif_data_dir + os.path.splitext(h5_file_path)[0] + '_y_hat_hard.pt', map_location=lambda storage, location: storage) # shape = (frames, freq_bins)
-    # # y_hat_hard = torch.load(model_data_dir + os.path.splitext(file_path)[0] + '_ibm_soft_est.pt', map_location=lambda storage, location: storage) # shape = (frames, freq_bins)
-    # # y_hat_hard = y_hat_hard.T # Transpose to match target y, shape = (freq_bins, frames)
+    ## F1 score
+    # ideal binary mask
+    h5_file_path = clean_file_path.replace('Clean', 'matlab_raw')
+    h5_file_path = h5_file_path.replace('_' + labels, '')
+    y_hat_hard = torch.load(classif_data_dir + os.path.splitext(h5_file_path)[0] + '_y_hat_hard.pt', map_location=lambda storage, location: storage) # shape = (frames, freq_bins)
+    # y_hat_hard = torch.load(model_data_dir + os.path.splitext(file_path)[0] + '_ibm_soft_est.pt', map_location=lambda storage, location: storage) # shape = (frames, freq_bins)
+    # y_hat_hard = y_hat_hard.T # Transpose to match target y, shape = (freq_bins, frames)
 
     # if labels == 'ibm_labels':
     #     y = clean_speech_IBM(s_tf,
     #                             quantile_fraction=quantile_fraction,
     #                             quantile_weight=quantile_weight)
-    # if labels == 'vad_labels':
-    #     # Read labels
-    #     h5_file_path = processed_data_dir + clean_file_path
+    if labels == 'vad_labels':
+        # Read labels
+        h5_file_path = processed_data_dir + clean_file_path
 
-    #     with h5.File(h5_file_path, 'r') as file:
-    #         y = np.array(file["Y"][:])
+        with h5.File(h5_file_path, 'r') as file:
+            y = np.array(file["Y"][:])
 
-    #     y = torch.LongTensor(y)
+        y = torch.LongTensor(y)
 
-    # # Convert y to Tensor for f1-score
-    # y_hat_hard = y_hat_hard.int()
-    # y = torch.LongTensor(y)
+    # Convert y to Tensor for f1-score
+    y_hat_hard = y_hat_hard.int()
+    y = torch.LongTensor(y)
 
-    # # accuracy, precision, recall, f1score_s_hat = f1_loss(y.flatten(), y_hat_hard.flatten(), epsilon=eps)
+    accuracy, precision, recall, f1score_s_hat = f1_loss(y.flatten(), y_hat_hard.flatten(), epsilon=eps)
 
-    # # plots of target / estimation
-    # # TF representation
-    # x_tf = stft(x_t,
-    #         fs=fs,
-    #         wlen_sec=wlen_sec,
-    #         win=win,
-    #         hop_percent=hop_percent,
-    #         center=center,
-    #         pad_mode=pad_mode,
-    #         pad_at_end=pad_at_end,
-    #         dtype=dtype) # shape = (freq_bins, frames)
+    # plots of target / estimation
+    # TF representation
+    x_tf = stft(x_t,
+            fs=fs,
+            wlen_sec=wlen_sec,
+            win=win,
+            hop_percent=hop_percent,
+            center=center,
+            pad_mode=pad_mode,
+            pad_at_end=pad_at_end,
+            dtype=dtype) # shape = (freq_bins, frames)
 
-    # s_tf = stft(s_t,
-    #         fs=fs,
-    #         wlen_sec=wlen_sec,
-    #         win=win,
-    #         hop_percent=hop_percent,
-    #         center=center,
-    #         pad_mode=pad_mode,
-    #         pad_at_end=pad_at_end,
-    #         dtype=dtype) # shape = (freq_bins, frames)
+    s_tf = stft(s_t,
+            fs=fs,
+            wlen_sec=wlen_sec,
+            win=win,
+            hop_percent=hop_percent,
+            center=center,
+            pad_mode=pad_mode,
+            pad_at_end=pad_at_end,
+            dtype=dtype) # shape = (freq_bins, frames)
 
-    # s_hat_tf = stft(s_hat_t,
-    #         fs=fs,
-    #         wlen_sec=wlen_sec,
-    #         win=win,
-    #         hop_percent=hop_percent,
-    #         center=center,
-    #         pad_mode=pad_mode,
-    #         pad_at_end=pad_at_end,
-    #         dtype=dtype) # shape = (freq_bins, frames)
+    s_hat_tf = stft(s_hat_t,
+            fs=fs,
+            wlen_sec=wlen_sec,
+            win=win,
+            hop_percent=hop_percent,
+            center=center,
+            pad_mode=pad_mode,
+            pad_at_end=pad_at_end,
+            dtype=dtype) # shape = (freq_bins, frames)
 
-    # ## mixture signal (wav + spectro)
-    # ## target signal (wav + spectro + mask)
-    # ## estimated signal (wav + spectro + mask)
-    # signal_list = [
-    #     [x_t, x_tf, None], # mixture: (waveform, tf_signal, no mask)
-    #     [s_t, s_tf, y.numpy()], # clean speech
-    #     [s_hat_t, s_hat_tf, y_hat_hard.numpy()]
-    # ]
-    # fig = display_multiple_signals(signal_list,
-    #                     fs=fs, vmin=vmin, vmax=vmax,
-    #                     wlen_sec=wlen_sec, hop_percent=hop_percent,
-    #                     xticks_sec=xticks_sec, fontsize=fontsize)
+    ## mixture signal (wav + spectro)
+    ## target signal (wav + spectro + mask)
+    ## estimated signal (wav + spectro + mask)
+    signal_list = [
+        [x_t, x_tf, None], # mixture: (waveform, tf_signal, no mask)
+        [s_t, s_tf, y.numpy()], # clean speech
+        [s_hat_t, s_hat_tf, y_hat_hard.numpy()]
+    ]
+    fig = display_multiple_signals(signal_list,
+                        fs=fs, vmin=vmin, vmax=vmax,
+                        wlen_sec=wlen_sec, hop_percent=hop_percent,
+                        xticks_sec=xticks_sec, fontsize=fontsize)
     
-    # # # put all metrics in the title of the figure
-    # # title = "Input SNR = {:.1f} dB \n" \
-    # #     "SI-SDR = {:.1f} dB,  " \
-    # #     "SI-SIR = {:.1f} dB,  " \
-    # #     "SI-SAR = {:.1f} dB\n" \
-    # #     "STOI = {:.2f},  " \
-    # #     "PESQ = {:.2f} \n" \
-    # #     "Accuracy = {:.3f},  "\
-    # #     "Precision = {:.3f},  "\
-    # #     "Recall = {:.3f},  "\
-    # #     "F1-score = {:.3f}\n".format(snr_db, si_sdr, si_sir, si_sar, stoi_s_hat, pesq_s_hat,\
-    # #         accuracy, precision, recall, f1score_s_hat)
-
     # # put all metrics in the title of the figure
     # title = "Input SNR = {:.1f} dB \n" \
-    #     "SI-SDR = {:.1f} dB.".format(snr_db, si_sdr)
+    #     "SI-SDR = {:.1f} dB,  " \
+    #     "SI-SIR = {:.1f} dB,  " \
+    #     "SI-SAR = {:.1f} dB\n" \
+    #     "STOI = {:.2f},  " \
+    #     "PESQ = {:.2f} \n" \
+    #     "Accuracy = {:.3f},  "\
+    #     "Precision = {:.3f},  "\
+    #     "Recall = {:.3f},  "\
+    #     "F1-score = {:.3f}\n".format(snr_db, si_sdr, si_sir, si_sar, stoi_s_hat, pesq_s_hat,\
+    #         accuracy, precision, recall, f1score_s_hat)
 
-    # fig.suptitle(title, fontsize=40)
+    # put all metrics in the title of the figure
+    title = "Input SNR = {:.1f} dB \n" \
+        "SI-SDR = {:.1f} dB.".format(snr_db, si_sdr)
 
-    # # Save figure
-    # fig.savefig(model_data_dir + os.path.splitext(proc_noisy_file_path)[0] + '_fig.png')
+    fig.suptitle(title, fontsize=40)
 
-    # # Clear figure
-    # plt.close()
+    # Save figure
+    fig.savefig(model_data_dir + os.path.splitext(proc_noisy_file_path)[0] + '_fig.png')
+
+    # Clear figure
+    plt.close()
 
     # metrics = [si_sdr, si_sir, si_sar, stoi_s_hat, pesq_s_hat,\
     #     accuracy, precision, recall, f1score_s_hat]
@@ -274,38 +275,38 @@ def main():
     
     # args = [[i, j[0], j[1]] for i,j in enumerate(args)]
     # args = [[i, j[0], j[1]] for i,j in enumerate(args) if j[0].split('/')[-2] == '54M']
-    args = [[i, j[0], j[1]] for i,j in enumerate(args) if j[0].split('/')[-4] in ['0', '5', '10']]
+    # args = [[i, j[0], j[1]] for i,j in enumerate(args) if j[0].split('/')[-4] in ['0', '5', '10']]
     
     # args = [[j[0], j[1]] for j in args if j[0].split('/')[-2] == '54M']
     # args = [[j[0], j[1]] for j in args if j[0].split('/')[-4] == '5']
-    # args = [[i, j[0], j[1]] for i,j in enumerate(args) if j[0].split('/')[-5] in ['LR']]
+    args = [[i, j[0], j[1]] for i,j in enumerate(args) if j[0].split('/')[-5] in ['LR']]
 
     t1 = time.perf_counter()
 
-    # all_metrics = []
-    # all_snr_db = []
-    # all_noise_types = []
-    # all_noise_stationarities = []
-    # all_speakers = []
-    # for arg in tqdm(args):
-    #     metrics, snr_db, noise_type, noise_stationarity, speaker = compute_metrics_utt(arg)
-    #     all_metrics.append(metrics)
-    #     all_snr_db.append(snr_db)
-    #     all_noise_types.append(noise_type)
-    #     all_noise_stationarities.append(noise_stationarity)
-    #     all_speakers.append(speaker)
+    all_metrics = []
+    all_snr_db = []
+    all_noise_types = []
+    all_noise_stationarities = []
+    all_speakers = []
+    for arg in tqdm(args):
+        metrics, snr_db, noise_type, noise_stationarity, speaker = compute_metrics_utt(arg)
+        all_metrics.append(metrics)
+        all_snr_db.append(snr_db)
+        all_noise_types.append(noise_type)
+        all_noise_stationarities.append(noise_stationarity)
+        all_speakers.append(speaker)
     
-    with concurrent.futures.ProcessPoolExecutor(max_workers=None) as executor:
-        all_results = executor.map(compute_metrics_utt, args)
+    # with concurrent.futures.ProcessPoolExecutor(max_workers=None) as executor:
+    #     all_results = executor.map(compute_metrics_utt, args)
     
-    # Retrieve metrics and conditions
-    # Transform generator to list
-    all_results = list(all_results)
-    all_metrics = [i[0] for i in all_results]
-    all_snr_db = [i[1] for i in all_results]
-    all_noise_types = [i[2] for i in all_results]
-    all_noise_stationarities = [i[3] for i in all_results]
-    all_speakers = [i[4] for i in all_results]
+    # # Retrieve metrics and conditions
+    # # Transform generator to list
+    # all_results = list(all_results)
+    # all_metrics = [i[0] for i in all_results]
+    # all_snr_db = [i[1] for i in all_results]
+    # all_noise_types = [i[2] for i in all_results]
+    # all_noise_stationarities = [i[3] for i in all_results]
+    # all_speakers = [i[4] for i in all_results]
     
     t2 = time.perf_counter()
     print(f'Finished in {t2 - t1} seconds')
@@ -344,7 +345,7 @@ def main_polqa():
 
     # Convert dict to tuples
     noisy_clean_pair_paths = list(noisy_clean_pair_paths.items())
-    # noisy_clean_pair_paths = [[j[0], j[1]] for j in enumerate(noisy_clean_pair_paths) if j[0].split('/')[-4] in ['0', '5', '10']]
+    noisy_clean_pair_paths = [[j[0], j[1]] for j in noisy_clean_pair_paths if j[0].split('/')[-4] in ['0', '5', '10']]
 
     v_reference_paths = []
     v_processed_paths = []
@@ -358,7 +359,9 @@ def main_polqa():
         v_reference_paths.append(v_reference_path)
 
         # Read estimated audio
-        v_processed_path = model_data_dir + os.path.splitext(proc_noisy_file_path)[0] + '_s_est.wav'
+        # v_processed_path = model_data_dir + os.path.splitext(proc_noisy_file_path)[0] + '_s_est.wav'
+        v_processed_path = model_data_dir + os.path.splitext(proc_noisy_file_path)[0] + '_s_est_y_hat_hard.wav'
+        # v_processed_path = processed_data_dir + proc_noisy_file_path
         v_processed_paths.append(v_processed_path)
 
     #  POLQA on short audio files
@@ -370,6 +373,8 @@ def main_polqa():
     all_noise_types = []
     all_noise_stationarities = []
     all_speakers = []
+
+    indexes_to_remove = []
 
     # Fuse both list
     for i, ((proc_noisy_file_path, clean_file_path), v_reference_path, v_processed_path) in enumerate(zip(noisy_clean_pair_paths, v_reference_paths, v_processed_paths)):
@@ -395,8 +400,11 @@ def main_polqa():
             s_hat_t = np.pad(s_hat_t, (0, 3 * fs - len(s_hat_t)))
             
             # Remove from path list
-            v_reference_paths.remove(v_reference_path)
-            v_processed_paths.remove(v_processed_path)
+            # v_reference_paths.remove(v_reference_path)
+            # v_processed_paths.remove(v_processed_path)
+            # del v_reference_paths[i]
+            # del v_processed_paths[i]
+            indexes_to_remove.append(i)
 
             # Save as new files
             # Read clean audio
@@ -428,6 +436,10 @@ def main_polqa():
 
     # del extended_v_processed_paths[3]
     # del extended_v_processed_paths[-1]
+    
+    for index in sorted(indexes_to_remove, reverse=True):
+        del v_reference_paths[index]
+        del v_processed_paths[index]
 
     t1 = time.perf_counter()
     
@@ -438,6 +450,7 @@ def main_polqa():
                            narrowband=False, # Reduce computation time
                            wideband=True,
                            n_workers=4)
+                        #    n_batches=50)
     # extended_all_polqa = polqa(v_reference=extended_v_reference_paths, v_processed=extended_v_processed_paths)
 
     t2 = time.perf_counter()
@@ -462,6 +475,15 @@ def main_polqa():
 
     # Flatten list
     all_polqa = [[sub_list[1]] for sub_list in all_polqa]
+
+    # Detect nan
+    for i, (polqa_value) in enumerate(all_polqa):
+        if math.isnan(polqa_value[0]):
+            del all_polqa[i]
+            del all_snr_db[i]
+            del all_noise_types[i]
+            del all_noise_stationarities[i]
+            del all_speakers[i]
 
     metrics_keys = ['POLQA']
 
