@@ -37,8 +37,8 @@ if speech_dataset_name == 'ntcd_timit':
 # Settings
 dataset_type = 'test'
 
-dataset_size = 'subset'
-# dataset_size = 'complete'
+# dataset_size = 'subset'
+dataset_size = 'complete'
 
 # Labels
 labels = 'vad_labels'
@@ -68,8 +68,8 @@ eps = 1e-8
 
 # M1/M2
 # model_name = 'ntcd_M1_nonorm_hdim_128_128_zdim_016_end_epoch_500/M1_epoch_118_vloss_416.54'
-model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_10.0_yhatsoft_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_144_vloss_396.43'
-# model_name = 'ntcd_M2_VAD_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_118_vloss_407.90'
+# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_10.0_yhatsoft_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_144_vloss_396.43'
+model_name = 'ntcd_M2_VAD_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_118_vloss_407.90'
 # model_name = 'ntcd_M2_info_VAD_Lenc_aux_v1_alpha_0.0_beta_10.0_gamma_10.0_y_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_170_vloss_402.17'
 # model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_0.0_beta_10.0_y_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_172_vloss_401.92'
 # model_name = 'ntcd_M2_info_VAD_alpha_10.0_beta_10.0_yhatsoft_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_135_vloss_397.11'
@@ -346,7 +346,7 @@ def main_polqa():
     # Convert dict to tuples
     noisy_clean_pair_paths = list(noisy_clean_pair_paths.items())
     noisy_clean_pair_paths = [[j[0], j[1]] for j in noisy_clean_pair_paths if j[0].split('/')[-4] in ['0', '5', '10']]
-
+    
     v_reference_paths = []
     v_processed_paths = []
     for (proc_noisy_file_path, clean_file_path) in noisy_clean_pair_paths:
@@ -449,8 +449,8 @@ def main_polqa():
                            v_processed=v_processed_paths,
                            narrowband=False, # Reduce computation time
                            wideband=True,
-                           n_workers=4)
-                        #    n_batches=50)
+                           n_workers=2)
+                        #    n_batches=2)
     # extended_all_polqa = polqa(v_reference=extended_v_reference_paths, v_processed=extended_v_processed_paths)
 
     t2 = time.perf_counter()
