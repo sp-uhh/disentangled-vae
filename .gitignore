@@ -13,6 +13,9 @@ __pycache__
 # Package setup
 setup.py
 
+# POLQA
+src/uhh-sp
+
 # data
 data/complete/
 data/subset/models/
