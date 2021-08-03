@@ -245,23 +245,20 @@ def display_multiple_signals(signal_list,
         if not (x_tf is None):
             # image plot
             #ax = plt.subplot(gs[(i+2)])
-            ax = plt.subplot(gs[3*(i+3)])
+            ax = plt.subplot(gs[3*(i+nb_signals)])
             display_spectrogram(x_tf, True, fs, vmin, vmax, wlen_sec, hop_percent, xticks_sec, 'magma', fontsize)
 
             # color bar in it's own axis
-            #colorAx = plt.subplot(gs[(i+2)*nb_signals + 1])
-            colorAx = plt.subplot(gs[3*(i+3) + 1])
+            colorAx = plt.subplot(gs[3*(i+nb_signals) + 1])
             cbar = plt.colorbar(cax=colorAx, format='%+2.0f dB')
 
         if not (x_ibm is None):
             # image plot
-            #ax = plt.subplot(gs[(i+4)*nb_signals])
-            ax = plt.subplot(gs[3*(i+6)])
+            ax = plt.subplot(gs[3*(i+nb_signals*2)])
             display_spectrogram(x_ibm, False, fs, 0, 1, wlen_sec, hop_percent, xticks_sec, 'Greys_r', fontsize)
 
             # color bar in it's own axis
-            #colorAx = plt.subplot(gs[(i+4)*nb_signals+1])
-            colorAx = plt.subplot(gs[3*(i+6)+1])
+            colorAx = plt.subplot(gs[3*(i+nb_signals*2)+1])
             plt.colorbar(cax=colorAx, format='%0.1f')
     
     #gs.tight_layout(fig)

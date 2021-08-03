@@ -37,8 +37,8 @@ if speech_dataset_name == 'ntcd_timit':
 # Settings
 dataset_type = 'test'
 
-# dataset_size = 'subset'
-dataset_size = 'complete'
+dataset_size = 'subset'
+# dataset_size = 'complete'
 
 # Labels
 labels = 'vad_labels'
@@ -69,8 +69,8 @@ eps = 1e-8
 # M1/M2
 # model_name = 'ntcd_M1_nonorm_hdim_128_128_zdim_016_end_epoch_500/M1_epoch_118_vloss_416.54'
 # model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_10.0_yhatsoft_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_144_vloss_396.43'
-model_name = 'ntcd_M2_VAD_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_118_vloss_407.90'
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v1_alpha_0.0_beta_10.0_gamma_10.0_y_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_170_vloss_402.17'
+# model_name = 'ntcd_M2_VAD_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_118_vloss_407.90'
+model_name = 'ntcd_M2_info_VAD_Lenc_aux_v1_alpha_0.0_beta_10.0_gamma_10.0_y_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_170_vloss_402.17'
 # model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_0.0_beta_10.0_y_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_172_vloss_401.92'
 # model_name = 'ntcd_M2_info_VAD_alpha_10.0_beta_10.0_yhatsoft_nonorm_hdim_128_128_zdim_016_end_epoch_500/M2_epoch_135_vloss_397.11'
 
@@ -106,8 +106,8 @@ def compute_metrics_utt(args):
     # Read files
     s_t, fs_s = sf.read(processed_data_dir + clean_audio_path) # clean speech
     x_t, fs_x = sf.read(processed_data_dir + proc_noisy_file_path) # mixture
-    s_hat_t, fs_s_hat = sf.read(model_data_dir + os.path.splitext(proc_noisy_file_path)[0] + '_s_est.wav') # est. speech
-    # s_hat_t, fs_s_hat = sf.read(model_data_dir + os.path.splitext(proc_noisy_file_path)[0] + '_s_est_y_hat_hard.wav') # est. speech
+    # s_hat_t, fs_s_hat = sf.read(model_data_dir + os.path.splitext(proc_noisy_file_path)[0] + '_s_est.wav') # est. speech
+    s_hat_t, fs_s_hat = sf.read(model_data_dir + os.path.splitext(proc_noisy_file_path)[0] + '_s_est_y_hat_hard.wav') # est. speech
 
     # # Reduce time length if estimated signal is smaller
     # if len(s_hat_t) < len(s_t):
@@ -238,26 +238,42 @@ def compute_metrics_utt(args):
     # Clear figure
     plt.close()
 
-    # metrics = [si_sdr, si_sir, si_sar, stoi_s_hat, pesq_s_hat,\
-    #     accuracy, precision, recall, f1score_s_hat]
-
-    # metrics = [si_sdr, stoi_s_hat, pesq_s_hat,\
-    #     accuracy, precision, recall, f1score_s_hat]
-
     metrics = [si_sdr, stoi_s_hat, pesq_s_hat]
-    
-    # metrics = [si_sdr]
 
-    # metrics = [si_sdr, pesq_s_hat,\
-    #     accuracy, precision, recall, f1score_s_hat]
 
-    # # Check noise 
-    # output_path = model_data_dir + proc_noisy_file_path
-    # output_path = os.path.splitext(output_path)[0]
+    # Vs before / after MCEM
+    Vs_bef = torch.load(model_data_dir + os.path.splitext(proc_noisy_file_path)[0] + '_Vs_bef.pt', map_location=lambda storage, location: storage) # shape = (frames, freq_bins)
+    Vs_aft = torch.load(model_data_dir + os.path.splitext(proc_noisy_file_path)[0] + '_Vs_aft.pt', map_location=lambda storage, location: storage) # shape = (frames, freq_bins)
 
-    # os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    Vs_bef = torch.sqrt(Vs_bef)
+    Vs_aft = torch.sqrt(Vs_aft)
 
-    # sf.write(output_path + '_n.wav', n_t, fs)
+    ## mixture signal (wav + spectro)
+    ## target signal (wav + spectro + mask)
+    ## Vs before MCEM (None + spectro + mask)
+    ## Vs after MCEM  (None + spectro + mask)
+    signal_list = [
+        [x_t, x_tf, None], # mixture: (waveform, tf_signal, no mask)
+        [s_t, s_tf, y.numpy()], # clean speech
+        [None, Vs_bef, y_hat_hard.numpy()], 
+        [None, Vs_aft, y_hat_hard.numpy()]
+    ]
+    fig = display_multiple_signals(signal_list,
+                        fs=fs, vmin=vmin, vmax=vmax,
+                        wlen_sec=wlen_sec, hop_percent=hop_percent,
+                        xticks_sec=xticks_sec, fontsize=fontsize)
+
+    # put all metrics in the title of the figure
+    title = "Input SNR = {:.1f} dB \n" \
+        "SI-SDR = {:.1f} dB.".format(snr_db, si_sdr)
+
+    fig.suptitle(title, fontsize=40)
+
+    # Save figure
+    fig.savefig(model_data_dir + os.path.splitext(proc_noisy_file_path)[0] + '_Vs.png')
+
+    # Clear figure
+    plt.close()
 
     return metrics, snr_db, noise_type, noise_stationarity, speaker
 
@@ -273,13 +289,13 @@ def main():
     # Convert dict to tuples
     args = list(noisy_clean_pair_paths.items())
     
-    # args = [[i, j[0], j[1]] for i,j in enumerate(args)]
+    args = [[i, j[0], j[1]] for i,j in enumerate(args)]
     # args = [[i, j[0], j[1]] for i,j in enumerate(args) if j[0].split('/')[-2] == '54M']
     # args = [[i, j[0], j[1]] for i,j in enumerate(args) if j[0].split('/')[-4] in ['0', '5', '10']]
     
     # args = [[j[0], j[1]] for j in args if j[0].split('/')[-2] == '54M']
     # args = [[j[0], j[1]] for j in args if j[0].split('/')[-4] == '5']
-    args = [[i, j[0], j[1]] for i,j in enumerate(args) if j[0].split('/')[-5] in ['LR']]
+    # args = [[i, j[0], j[1]] for i,j in enumerate(args) if j[0].split('/')[-5] in ['LR']]
 
     t1 = time.perf_counter()
 
@@ -498,5 +514,5 @@ def main_polqa():
                   all_noise_stationarities=all_noise_stationarities)
                   
 if __name__ == '__main__':
-    # main()
-    main_polqa()
+    main()
+    # main_polqa()
