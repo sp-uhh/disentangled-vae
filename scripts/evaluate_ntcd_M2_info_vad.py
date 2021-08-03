@@ -25,8 +25,8 @@ if speech_dataset_name == 'ntcd_timit':
 
 dataset_type = 'test'
 
-# dataset_size = 'subset'
-dataset_size = 'complete'
+dataset_size = 'subset'
+# dataset_size = 'complete'
 
 # Labels
 labels = 'vad_labels'
@@ -107,7 +107,8 @@ var_RW = 0.01
 
 # GPU Multiprocessing
 cuda = torch.cuda.is_available()
-nb_devices = torch.cuda.device_count()
+# nb_devices = torch.cuda.device_count()
+nb_devices = 4
 nb_process_per_device = 2
 
 # Data directories
@@ -226,6 +227,10 @@ def process_utt(mcem, model, classifier, mean, std,
     S_hat = mcem.S_hat #+ np.finfo(np.float32).eps
     N_hat = mcem.N_hat #+ np.finfo(np.float32).eps
 
+    # Vs before/after MCEM
+    Vs_bef = mcem.Vs_0
+    Vs_aft = torch.mean(mcem.Vs, axis=0)
+
     # ISTFT
     s_hat = istft(S_hat,
                  fs=fs,
@@ -252,6 +257,10 @@ def process_utt(mcem, model, classifier, mean, std,
     # # Save estimated label
     # torch.save(y_hat_hard, output_path + '_y_hat_hard.pt')
     # torch.save(y_hat_soft, output_path + '_y_hat_soft.pt')
+
+    # Save Vs before/after MCEM
+    torch.save(Vs_bef, output_path + '_Vs_bef.pt')
+    torch.save(Vs_aft, output_path + '_Vs_aft.pt')
 
     # sf.write(output_path + '_s_est.wav', s_hat, fs)
     # sf.write(output_path + '_n_est.wav', n_hat, fs)
@@ -343,14 +352,14 @@ def main():
     noisy_clean_pair_paths = list(noisy_clean_pair_paths.items())
 
     # Subset of level = 10 dB
-    noisy_clean_pair_paths = [[j[0], j[1]] for j in noisy_clean_pair_paths if j[0].split('/')[-4] == '10']
+    # noisy_clean_pair_paths = [[j[0], j[1]] for j in noisy_clean_pair_paths if j[0].split('/')[-4] == '10']
     # noisy_clean_pair_paths = [[j[0], j[1]] for j in noisy_clean_pair_paths if j[0].split('/')[-4] in ['0', '5', '10']]
 
     # Split list in nb_devices * nb_processes_per_device
     b = np.array_split(noisy_clean_pair_paths, nb_devices*nb_process_per_device)
     
     # Assign each list to a process
-    b = [(i%nb_devices, sublist, mcem, model, classifier) for i, sublist in enumerate(b)]    # Split list in nb_devices * nb_processes_per_device
+    b = [(i%nb_devices+4, sublist, mcem, model, classifier) for i, sublist in enumerate(b)]    # Split list in nb_devices * nb_processes_per_device
     
     print('Start evaluation')
     # start = time.time()

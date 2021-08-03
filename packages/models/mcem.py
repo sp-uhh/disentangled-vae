@@ -712,7 +712,10 @@ class MCEM_M2v3(EM):
         # self.Z = torch.t(Zclean) # Last draw of the latent variables, shape (L, N)
         self.Zclean = torch.t(Zclean) # Last draw of the latent variables, shape (L, N)
         self.X_abs_2_t = self.X_abs_2.clone()
-   
+        with torch.no_grad():
+            Vs_0 = self.vae.decoder(torch.t(torch.cat([self.Z, y], dim=0)))
+            self.Vs_0 = torch.t(Vs_0)
+
     def sample_posterior(self, Z, y, nsamples=10, burnin=30):
         # Metropolis-Hastings
         
