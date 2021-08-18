@@ -218,7 +218,7 @@ class DeepGenerativeModel(VariationalAutoencoder):
         return x
 
 class DeepGenerativeModel_v2(VariationalAutoencoder):
-    def __init__(self, dims, classifier):
+    def __init__(self, dims):
         [x_dim, self.y_dim, z_dim, h_dim] = dims
         super(DeepGenerativeModel_v2, self).__init__([x_dim, z_dim, h_dim])
 
@@ -441,4 +441,111 @@ class DeepGenerativeModel_v5(nn.Module):
         """
         y = y.float()
         x = self.enc_dec_clf.decoder(torch.cat([z, y], dim=1))
+        return x
+
+class DeepGenerativeModel_v6(nn.Module):
+    def __init__(self, dims):
+        """
+        M2 code replication from the paper
+        'Semi-Supervised Learning with Deep Generative Models'
+        (Kingma 2014) in PyTorch.
+
+        The "Generative semi-supervised model" is a probabilistic
+        model that incorporates label information in both
+        inference and generation.
+
+        Initialise a new generative model
+        :param dims: dimensions of x, y, z and hidden layers.
+        """
+        [x_dim, self.y_dim, z_dim, h_dim] = dims
+        super(DeepGenerativeModel_v6, self).__init__()
+        
+        self.encoder = Encoder([x_dim, h_dim, z_dim])
+        self.decoder = Decoder([z_dim + self.y_dim, list(reversed(h_dim)), x_dim])
+        self.auxiliary = Classifier([z_dim, h_dim, self.y_dim])
+
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                init.xavier_normal_(m.weight.data)
+                if m.bias is not None:
+                    m.bias.data.zero_()
+
+    def classify_fromZ(self, z):
+        y = self.auxiliary(z)
+        return y
+
+    def forward(self, x, y):
+        # Add label and data and generate latent variable
+        z, z_mu, z_log_var = self.encoder(x)
+
+        # Reconstruct data point from latent data and label
+        x_mu = self.decoder(torch.cat([z, y], dim=1))
+
+        return x_mu, z, z_mu, z_log_var
+
+    def sample(self, z, y):
+        """
+        Samples from the Decoder to generate an x.
+        :param z: latent normal variable
+        :param y: label (one-hot encoded)
+        :return: x
+        """
+        y = y.float()
+        x = self.decoder(torch.cat([z, y], dim=1))
+        return x
+
+
+class DeepGenerativeModel_v7(nn.Module):
+    def __init__(self, dims):
+        """
+        M2 code replication from the paper
+        'Semi-Supervised Learning with Deep Generative Models'
+        (Kingma 2014) in PyTorch.
+
+        The "Generative semi-supervised model" is a probabilistic
+        model that incorporates label information in both
+        inference and generation.
+
+        Initialise a new generative model
+        :param dims: dimensions of x, y, z and hidden layers.
+        """
+        [x_dim, self.y_dim, z_dim, h_dim] = dims
+        super(DeepGenerativeModel_v7, self).__init__()
+        
+        self.enc_dec = DeepGenerativeModel_v2([x_dim, self.y_dim, z_dim, h_dim])
+        self.auxiliary = Classifier([z_dim, h_dim, self.y_dim])
+
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                init.xavier_normal_(m.weight.data)
+                if m.bias is not None:
+                    m.bias.data.zero_()
+
+    def classify_fromX(self, x):
+        z, z_mu, z_log_var = self.enc_dec.encoder(x)
+        y = self.auxiliary(z)
+        return y
+
+    def classify_fromZ(self, z):
+        y = self.auxiliary(z)
+        return y
+
+    def forward(self, x, y):
+        # Add label and data and generate latent variable
+        z, z_mu, z_log_var = self.enc_dec.encoder(x)
+
+        # Reconstruct data point from latent data and label
+        x_mu = self.enc_dec.decoder(torch.cat([z, y], dim=1))
+
+        return x_mu, z, z_mu, z_log_var
+
+    def sample(self, z, y):
+        """
+        Samples from the Decoder to generate an x.
+        :param z: latent normal variable
+        :param y: label (one-hot encoded)
+        :return: x
+        """
+        y = y.float()
+        x = self.enc_dec.decoder(torch.cat([z, y], dim=1))
         return x
