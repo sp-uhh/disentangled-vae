@@ -10,14 +10,14 @@ from torch.utils.data import DataLoader
 
 from packages.utils import count_parameters
 from packages.data_handling import HDF5CleanSpectrogramLabeledFrames
-from packages.models.models import DeepGenerativeModel_v6
+from packages.models.models import DeepGenerativeModel_v6, DeepGenerativeModel_v9
 from packages.models.utils import elbo, binary_cross_entropy, binary_cross_entropy_v3
 
 ##################################### SETTINGS #####################################################
 
 # Dataset
-dataset_size = 'subset'
-# dataset_size = 'complete'
+# dataset_size = 'subset'
+dataset_size = 'complete'
 upsampled = True
 
 dataset_name = 'ntcd_timit'
@@ -49,19 +49,18 @@ std_norm = False
 eps = 1e-8
 
 # Classifier
-alpha = 0.
+alpha = 10.
 beta = 10.
-gamma = 10.
+gamma = 1.
 
 # Training
 batch_size = 128
-# learning_rate = 1e-3
 learning_rate = 1e-4
 log_interval = 250
 start_epoch = 1
 end_epoch = 500
 
-model_name = 'ntcd_M2_info_VAD_avd_v2_Lenc_aux_v3_alpha_0.0_beta_10.0_gamma_10.0_y_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+model_name = 'ntcd_M2_info_VAD_avd_v2_Lenc_aux_v3_alpha_0.0_beta_100.0_gamma_100.0_y_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
 
 # Data directories
 input_video_dir = os.path.join('data', dataset_size, 'processed/')
@@ -92,7 +91,8 @@ print('- Number of validation batches: {}'.format(len(valid_loader)))
 
 def main():
     print('Create model')
-    model = DeepGenerativeModel_v6([x_dim, y_dim, z_dim, h_dim])
+    # model = DeepGenerativeModel_v6([x_dim, y_dim, z_dim, h_dim])
+    model = DeepGenerativeModel_v9([x_dim, y_dim, z_dim, h_dim])
 
     if cuda: model = model.to(device, non_blocking=non_blocking)
 
@@ -115,7 +115,7 @@ def main():
 
     # Optimizer settings
     # 1 optimizer per submodel
-    optimizer_enc = torch.optim.Adam(model.encoder.parameters(), lr=learning_rate, betas=(0.9, 0.999))
+    optimizer_enc_clf = torch.optim.Adam(model.enc_clf.parameters(), lr=learning_rate, betas=(0.9, 0.999))
     optimizer_dec = torch.optim.Adam(model.decoder.parameters(), lr=learning_rate, betas=(0.9, 0.999))
     optimizer_aux = torch.optim.Adam(model.auxiliary.parameters(), lr=learning_rate, betas=(0.9, 0.999))
 
@@ -126,14 +126,14 @@ def main():
     print('Start training')
     for epoch in range(start_epoch, end_epoch):
         model.train()
-        total_ELBO, total_kl, total_likelihood, total_enc, total_classif, total_aux = (0, 0, 0, 0, 0, 0)
+        total_ELBO, total_kl, total_likelihood, total_enc, total_classif, total_aux, total_aux_ent = (0, 0, 0, 0, 0, 0, 0)
         for batch_idx, (x, y) in tqdm(enumerate(train_loader)):
             if cuda:
                 x, y = x.to(device, non_blocking=non_blocking), y.to(device, non_blocking=non_blocking)
 
             # Compute all variables & losses
             # ELBO, rec_loss, KL
-            z, mu, logvar = model.encoder(x)
+            z, mu, logvar = model.enc_clf.encoder(x)
             r = model.decoder(torch.cat([z.detach(), y], dim=1))
             ELBO, recon_loss, KL = elbo(x, r, mu, logvar, eps)
 
@@ -143,62 +143,72 @@ def main():
             # Gradient of each loss
 			#zero the grads - otherwise they will be acculated
 			#fill in grads and do updates:
-            dec_loss.backward()
-            optimizer_dec.step()
-            optimizer_dec.zero_grad()
+            dec_loss.backward(retain_graph=True)
+
+            # Add + alpha * BCE (Classifier)
+            y_hat_class_soft = model.classify_fromX(x)
+            classif_loss = alpha * binary_cross_entropy(y_hat_class_soft, y, eps)
 
             # Add - beta * BCE (Encoder)
             # Train the encoder to NOT predict y from z
             y_hat_aux_soft = model.classify_fromZ(z)
-            r = model.decoder(torch.cat([z, y], dim=1))
-            aux_enc_loss = beta * binary_cross_entropy_v3(y_hat_aux_soft, eps)            
-            ELBO, recon_loss, KL = elbo(x, r, mu, logvar, eps)
-
+            aux_enc_loss = beta * binary_cross_entropy_v3(y_hat_aux_soft, eps)
+            
             # Encoder loss
-            enc_loss = ELBO - aux_enc_loss
+            # enc_loss = ELBO - aux_enc_loss
+            enc_loss = ELBO + classif_loss - aux_enc_loss
 
-            enc_loss.backward()
-            optimizer_enc.step()
-            optimizer_enc.zero_grad()
+            enc_loss.backward(retain_graph=True)
 
             # Add + beta * BCE (Aux)
             # Train the aux net to predict y from z
             y_hat_aux_soft = model.classify_fromZ(z.detach()) #detach: to ONLY update the AUX net #the prediction here for GT being predY
             aux_loss = gamma * binary_cross_entropy(y_hat_aux_soft, y, eps)
 
-            aux_loss.backward()
+            aux_loss.backward(retain_graph=True)
+
+            optimizer_enc_clf.step()
+            optimizer_enc_clf.zero_grad()
+
+            optimizer_dec.step()
+            optimizer_dec.zero_grad()
+
             optimizer_aux.step()
             optimizer_aux.zero_grad()
+
+            aux_ent_loss = binary_cross_entropy_v3(y_hat_aux_soft, eps)
 
             # Total losses 
             total_ELBO += ELBO.item()
             total_kl += KL.item()
             total_likelihood += recon_loss.item()
             total_enc += enc_loss.item()
+            total_classif += classif_loss.item()
+            total_aux_ent += aux_ent_loss.item()
             total_aux += aux_loss.item()
 
             # Save to log
             if batch_idx % log_interval == 0:
                 print(('Train Epoch: {:2d}   [{:7d}/{:7d} ({:2d}%)]    '\
-                    'ELBO: {:.3f}    KL: {:.3f}    Recon.: {:.3f}    Enc.: {:.3f}    Aux.: {:.3f}    '\
+                    'ELBO: {:.3f}    KL: {:.3f}    Recon.: {:.3f}    Enc.: {:.3f}    Classif.: {:.3f}    Aux.: {:.3f}    Aux. Ent.: {:.3f}    '\
                     + '').format(epoch, batch_idx*len(x), len(train_loader.dataset), int(100.*batch_idx/len(train_loader)),\
-                            ELBO.item(), KL.item(), recon_loss.item(), enc_loss.item(), aux_loss.item()), 
+                            ELBO.item(), KL.item(), recon_loss.item(), enc_loss.item(), classif_loss.item(), aux_loss.item(), aux_ent_loss.item()), 
                     file=open(model_dir + '/' + 'output_batch.log','a'))
 
         if epoch % 1 == 0:
             model.eval()
 
             print("Epoch: {}".format(epoch))
-            print("[Train]\t\t ELBO: {:.3f}, KL: {:.3f}, Recon.: {:.3f}, Enc.: {:.3f}, Aux.: {:.3f}"\
-                "".format(total_ELBO / t, total_kl / t, total_likelihood / t, total_enc / t, total_aux / t))
+            print("[Train]\t\t ELBO: {:.3f}, KL: {:.3f}, Recon.: {:.3f}, Enc.: {:.3f}, Classif.: {:.3f}, Aux.: {:.3f}, Aux. Ent.: {:.3f}"\
+                "".format(total_ELBO / t, total_kl / t, total_likelihood / t, total_enc / t, total_classif / t, total_aux / t, total_aux_ent / t))
 
             # Save to log
             print(("Epoch: {}".format(epoch)), file=open(model_dir + '/' + 'output_epoch.log','a'))
-            print(("[Train]\t\t ELBO: {:.3f}, KL: {:.3f}, Recon.: {:.3f}, Enc.: {:.3f}, Aux.: {:.3f}"\
-                "".format(total_ELBO / t, total_kl / t, total_likelihood / t, total_enc / t, total_aux / t)),
+            print(("[Train]\t\t ELBO: {:.3f}, KL: {:.3f}, Recon.: {:.3f}, Enc.: {:.3f}, Classif.: {:.3f}, Aux.: {:.3f}, Aux. Ent.: {:.3f}"\
+                "".format(total_ELBO / t, total_kl / t, total_likelihood / t, total_enc / t, total_classif / t, total_aux / t, total_aux_ent / t)),
                 file=open(model_dir + '/' + 'output_epoch.log','a'))
 
-            total_ELBO, total_kl, total_likelihood, total_enc, total_classif, total_aux = (0, 0, 0, 0, 0, 0)
+            total_ELBO, total_kl, total_likelihood, total_enc, total_classif, total_aux, total_aux_ent = (0, 0, 0, 0, 0, 0, 0)
 
             for batch_idx, (x, y) in tqdm(enumerate(valid_loader)):
 
@@ -218,26 +228,35 @@ def main():
                 # Decoder loss
                 dec_loss = recon_loss
 
+                # Add + alpha * BCE (Classifier)
+                y_hat_class_soft = model.classify_fromX(x)
+                classif_loss = alpha * binary_cross_entropy(y_hat_class_soft, y, eps)
+
                 # Encoder loss
-                enc_loss = ELBO - aux_enc_loss
+                # enc_loss = ELBO - aux_enc_loss
+                enc_loss = ELBO + classif_loss - aux_enc_loss
 
                 # Add + beta * BCE (Aux)
                 # Train the aux net to predict y from z
                 y_hat_aux_soft = model.classify_fromZ(z) #detach: to ONLY update the AUX net #the prediction here for GT being predY
                 aux_loss = gamma * binary_cross_entropy(y_hat_aux_soft, y, eps)
 
+                aux_ent_loss = binary_cross_entropy_v3(y_hat_aux_soft, eps)
+
                 # Total losses
                 total_ELBO += ELBO.item()
                 total_kl += KL.item()
                 total_likelihood += recon_loss.item()
                 total_enc += enc_loss.item()
+                total_classif += classif_loss.item()
+                total_aux_ent += aux_ent_loss.item()
                 total_aux += aux_loss.item()
   
-            print("[Validation]\t ELBO: {:.3f}, KL: {:.3f}, Recon.: {:.3f}, Enc.: {:.3f}, Aux.: {:.3f}"\
-                "".format(total_ELBO / m, total_kl / m, total_likelihood / m, total_enc / m, total_aux / m))
+            print("[Validation]\t ELBO: {:.3f}, KL: {:.3f}, Recon.: {:.3f}, Enc.: {:.3f}, Classif.: {:.3f}, Aux.: {:.3f}, Aux. Ent.: {:.3f}"\
+                "".format(total_ELBO / m, total_kl / m, total_likelihood / m, total_enc / m, total_classif / m, total_aux / m, total_aux_ent / m))
 
-            print(("[Validation]\t ELBO: {:.3f}, KL: {:.3f}, Recon.: {:.3f}, Enc.: {:.3f}, Aux.: {:.3f}"\
-                "".format(total_ELBO / m, total_kl / m, total_likelihood / m, total_enc / m, total_aux / m)),
+            print(("[Validation]\t ELBO: {:.3f}, KL: {:.3f}, Recon.: {:.3f}, Enc.: {:.3f}, Classif.: {:.3f}, Aux.: {:.3f}, Aux. Ent.: {:.3f}"\
+                "".format(total_ELBO / m, total_kl / m, total_likelihood / m, total_enc / m, total_classif / m, total_aux / m, total_aux_ent / m)),
                 file=open(model_dir + '/' + 'output_epoch.log','a'))
 
             # Save model

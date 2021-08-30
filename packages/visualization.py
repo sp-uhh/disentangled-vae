@@ -65,9 +65,11 @@ def display_spectrogram(complex_spec,
     """
 
     # Transform to amplitude_db
-    amplitude_spec = abs(complex_spec)
     if convert_to_db:
+        amplitude_spec = abs(complex_spec)
         amplitude_spec = librosa.core.amplitude_to_db(amplitude_spec)
+    else:
+        amplitude_spec = complex_spec
 
     # Trick to plot VAD
     if amplitude_spec.shape[0] == 1:
@@ -257,7 +259,7 @@ def display_multiple_signals(signal_list,
             # image plot
             #ax = plt.subplot(gs[(i+4)*nb_signals])
             ax = plt.subplot(gs[3*(i+6)])
-            display_spectrogram(x_ibm, False, fs, 0, 1, wlen_sec, hop_percent, xticks_sec, 'Greys_r', fontsize)
+            display_spectrogram(x_ibm, False, fs, -3, 3, wlen_sec, hop_percent, xticks_sec, 'Greys_r', fontsize)
 
             # color bar in it's own axis
             #colorAx = plt.subplot(gs[(i+4)*nb_signals+1])

@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 from packages.utils import count_parameters
 from packages.data_handling import HDF5CleanSpectrogramLabeledFrames
 from packages.models.models import DeepGenerativeModel_v7
-from packages.models.utils import elbo, binary_cross_entropy, binary_cross_entropy_v3
+from packages.models.utils import elbo, KL_loss, binary_cross_entropy, binary_cross_entropy_v3
 
 ##################################### SETTINGS #####################################################
 
@@ -51,9 +51,8 @@ eps = 1e-8
 
 # Classifier
 alpha = 0.
-beta = 1.0
-gamma = 1.0
-delta = 1.0
+beta = 1.
+gamma = 1.
 
 # Training
 batch_size = 128
@@ -63,7 +62,7 @@ log_interval = 250
 start_epoch = 1
 end_epoch = 500
 
-model_name = 'ntcd_M2_info_VAD_avd_v3_Lenc_aux_v3_alpha_0.0_beta_1.0_gamma_1.0_delta_1.0_y_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+model_name = 'ntcd_M2_info_VAD_avd_v4_Lenc_aux_v3_alpha_0.0_beta_1.0_gamma_1.0_y_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
 
 # Data directories
 input_video_dir = os.path.join('data', dataset_size, 'processed/')
@@ -128,7 +127,7 @@ def main():
     print('Start training')
     for epoch in range(start_epoch, end_epoch):
         model.train()
-        total_ELBO, total_kl, total_likelihood, total_enc, total_classif, total_aux = (0, 0, 0, 0, 0, 0)
+        total_ELBO, total_kl, total_likelihood, total_enc, total_aux_enc, total_aux = (0, 0, 0, 0, 0, 0)
         for batch_idx, (x, y) in tqdm(enumerate(train_loader)):
             if cuda:
                 x, y = x.to(device, non_blocking=non_blocking), y.to(device, non_blocking=non_blocking)
@@ -139,40 +138,36 @@ def main():
             ELBO, recon_loss, KL = elbo(x, r, mu, logvar, eps)
 
             # Encoder / Decoder loss
-            # enc_dec_loss = ELBO
-            KL *= delta 
-            ELBO = recon_loss + KL
-            enc_dec_loss = ELBO
+            enc_dec_loss = recon_loss
             
             # Gradient of each loss
 			#zero the grads - otherwise they will be acculated
 			#fill in grads and do updates:
-            enc_dec_loss.backward(retain_graph=True)
+            enc_dec_loss.backward()
+            optimizer_enc_dec.step()
+            optimizer_enc_dec.zero_grad()
 
             # Add - beta * BCE (Encoder)
             # Train the encoder to NOT predict y from z
             # y_hat_aux_soft = model.classify_fromX(x)
+            r, z, mu, logvar = model(x, y)
             y_hat_aux_soft = model.classify_fromZ(z)
+            KL = KL_loss(mu, logvar)
             aux_enc_loss = beta * binary_cross_entropy_v3(y_hat_aux_soft, eps)
             
             # Adv Encoder loss
-            adv_enc_loss = - aux_enc_loss
-        
-            adv_enc_loss.backward(retain_graph=True)
+            adv_enc_loss = KL - aux_enc_loss
+
+            adv_enc_loss.backward()
+            optimizer_adv_enc.step()
+            optimizer_adv_enc.zero_grad()
 
             # Add + beta * BCE (Aux)
             # Train the aux net to predict y from z
             y_hat_aux_soft = model.classify_fromZ(z.detach()) #detach: to ONLY update the AUX net #the prediction here for GT being predY
             aux_loss = gamma * binary_cross_entropy(y_hat_aux_soft, y, eps)
 
-            aux_loss.backward(retain_graph=True)
-
-            optimizer_adv_enc.step()
-            optimizer_adv_enc.zero_grad()
-            
-            optimizer_enc_dec.step()
-            optimizer_enc_dec.zero_grad()
-
+            aux_loss.backward()
             optimizer_aux.step()
             optimizer_aux.zero_grad()
 
@@ -180,31 +175,32 @@ def main():
             total_ELBO += ELBO.item()
             total_kl += KL.item()
             total_likelihood += recon_loss.item()
-            total_enc += aux_enc_loss.item()
+            total_enc += adv_enc_loss.item()
+            total_aux_enc += aux_enc_loss.item()
             total_aux += aux_loss.item()
 
             # Save to log
             if batch_idx % log_interval == 0:
                 print(('Train Epoch: {:2d}   [{:7d}/{:7d} ({:2d}%)]    '\
-                    'ELBO: {:.3f}    KL: {:.3f}    Recon.: {:.3f}    Enc.: {:.3f}    Aux.: {:.3f}    '\
+                    'ELBO: {:.3f}    KL: {:.3f}    Recon.: {:.3f}    Enc.: {:.3f}    Aux-Enc.: {:.3f}    Aux.: {:.3f}    '\
                     + '').format(epoch, batch_idx*len(x), len(train_loader.dataset), int(100.*batch_idx/len(train_loader)),\
-                            ELBO.item(), KL.item(), recon_loss.item(), aux_enc_loss.item(), aux_loss.item()), 
+                            ELBO.item(), KL.item(), recon_loss.item(), adv_enc_loss.item(), aux_enc_loss.item(), aux_loss.item()), 
                     file=open(model_dir + '/' + 'output_batch.log','a'))
 
         if epoch % 1 == 0:
             model.eval()
 
             print("Epoch: {}".format(epoch))
-            print("[Train]\t\t ELBO: {:.3f}, KL: {:.3f}, Recon.: {:.3f}, Enc.: {:.3f}, Aux.: {:.3f}"\
-                "".format(total_ELBO / t, total_kl / t, total_likelihood / t, total_enc / t, total_aux / t))
+            print("[Train]\t\t ELBO: {:.3f}, KL: {:.3f}, Recon.: {:.3f}, Enc.: {:.3f}, Aux-Enc.: {:.3f}, Aux.: {:.3f}"\
+                "".format(total_ELBO / t, total_kl / t, total_likelihood / t, total_enc / t, total_aux_enc / t, total_aux / t))
 
             # Save to log
             print(("Epoch: {}".format(epoch)), file=open(model_dir + '/' + 'output_epoch.log','a'))
-            print(("[Train]\t\t ELBO: {:.3f}, KL: {:.3f}, Recon.: {:.3f}, Enc.: {:.3f}, Aux.: {:.3f}"\
-                "".format(total_ELBO / t, total_kl / t, total_likelihood / t, total_enc / t, total_aux / t)),
+            print(("[Train]\t\t ELBO: {:.3f}, KL: {:.3f}, Recon.: {:.3f}, Enc.: {:.3f}, Aux-Enc.: {:.3f}, Aux.: {:.3f}"\
+                "".format(total_ELBO / t, total_kl / t, total_likelihood / t, total_enc / t, total_aux_enc / t, total_aux / t)),
                 file=open(model_dir + '/' + 'output_epoch.log','a'))
 
-            total_ELBO, total_kl, total_likelihood, total_enc, total_classif, total_aux = (0, 0, 0, 0, 0, 0)
+            total_ELBO, total_kl, total_likelihood, total_enc, total_aux_enc, total_aux = (0, 0, 0, 0, 0, 0)
 
             for batch_idx, (x, y) in tqdm(enumerate(valid_loader)):
 
@@ -217,22 +213,21 @@ def main():
                 ELBO, recon_loss, KL = elbo(x, r, mu, logvar, eps)
 
                 # Encoder / Decoder loss
-                # enc_dec_loss = ELBO
-                KL *= delta
-                ELBO = recon_loss + KL
-                enc_dec_loss = ELBO
+                enc_dec_loss = recon_loss
 
                 # Add - beta * BCE (Encoder)
                 # Train the encoder to NOT predict y from z
                 # y_hat_aux_soft = model.classify_fromX(x)
+                z, mu, logvar = model.enc_dec.encoder(x)
                 y_hat_aux_soft = model.classify_fromZ(z)
                 aux_enc_loss = beta * binary_cross_entropy_v3(y_hat_aux_soft, eps)
                 
                 # Adv Encoder loss
-                adv_enc_loss = - aux_enc_loss
+                adv_enc_loss = KL - aux_enc_loss
 
                 # Add + beta * BCE (Aux)
                 # Train the aux net to predict y from z
+                z, mu, logvar = model.enc_dec.encoder(x)
                 y_hat_aux_soft = model.classify_fromZ(z.detach()) #detach: to ONLY update the AUX net #the prediction here for GT being predY
                 aux_loss = gamma * binary_cross_entropy(y_hat_aux_soft, y, eps)
 
@@ -240,14 +235,15 @@ def main():
                 total_ELBO += ELBO.item()
                 total_kl += KL.item()
                 total_likelihood += recon_loss.item()
-                total_enc += aux_enc_loss.item()
+                total_enc += adv_enc_loss.item()
+                total_aux_enc += aux_enc_loss.item()
                 total_aux += aux_loss.item()
   
-            print("[Validation]\t ELBO: {:.3f}, KL: {:.3f}, Recon.: {:.3f}, Enc.: {:.3f}, Aux.: {:.3f}"\
-                "".format(total_ELBO / m, total_kl / m, total_likelihood / m, total_enc / m, total_aux / m))
+            print("[Validation]\t ELBO: {:.3f}, KL: {:.3f}, Recon.: {:.3f}, Enc.: {:.3f}, Aux-Enc.: {:.3f},  Aux.: {:.3f}"\
+                "".format(total_ELBO / m, total_kl / m, total_likelihood / m, total_enc / m, total_aux_enc / m, total_aux / m))
 
-            print(("[Validation]\t ELBO: {:.3f}, KL: {:.3f}, Recon.: {:.3f}, Enc.: {:.3f}, Aux.: {:.3f}"\
-                "".format(total_ELBO / m, total_kl / m, total_likelihood / m, total_enc / m, total_aux / m)),
+            print(("[Validation]\t ELBO: {:.3f}, KL: {:.3f}, Recon.: {:.3f}, Enc.: {:.3f}, Aux-Enc.: {:.3f},  Aux.: {:.3f}"\
+                "".format(total_ELBO / m, total_kl / m, total_likelihood / m, total_enc / m, total_aux_enc / m, total_aux / m)),
                 file=open(model_dir + '/' + 'output_epoch.log','a'))
 
             # Save model

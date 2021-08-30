@@ -51,7 +51,7 @@ eps = 1e-8
 
 # Classifier
 alpha = 10.
-beta = 10.
+beta = 40.
 gamma = 10.
 
 # Training
@@ -62,48 +62,15 @@ log_interval = 250
 start_epoch = 1
 end_epoch = 500
 
-# model_name = 'ntcd_M2_info_VAD_alpha_0.0_beta_0.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_alpha_10.0_beta_10.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_alpha_10.0_beta_10.0_y_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_alpha_1.0_beta_10.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v2_alpha_10.0_beta_10.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v2_alpha_0.0_beta_10.0_y_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v2_alpha_10.0_beta_0.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_10.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_0.0_beta_10.0_y_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_10.0_y_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_0.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_1.0_beta_1.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_0.0_beta_1.0_y_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_1.0_beta_0.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v1_alpha_1.0_beta_1.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v1_alpha_0.0_beta_1.0_y_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_10.0_gamma_1.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_1.0_beta_10.0_gamma_1.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_1.0_gamma_1.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_-1.0_beta_1.0_gamma_1.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_100.0_beta_1.0_gamma_1.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_1.0_beta_1.0_gamma_1.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v1_alpha_0.0_beta_10.0_gamma_1.0_y_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_0.0_beta_10.0_gamma_10.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_0.0_beta_10.0_gamma_10.0_y_float_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_1.0_beta_10.0_gamma_10.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_1.0_beta_10.0_gamma_10.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_0.0_beta_10.0_gamma_10.0_0.1y_float_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_10.0_gamma_10.0_yhatsoft_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_0.0_beta_10.0_gamma_10.0_10.0y_float_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_10.0_gamma_10.0_yhatsoft_nofloat_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_sigmoidinloss_alpha_10.0_beta_10.0_gamma_10.0_yhatsoft_nofloat_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_10.0_yhatsoft_nofloat_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_20.0_beta_10.0_yhatsoft_nofloat_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_30.0_beta_10.0_yhatsoft_nofloat_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_100.0_beta_10.0_yhatsoft_nofloat_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_30.0_beta_10.0_yhatsoft_nofloat_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_1.0_yhatsoft_nofloat_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_10.0_gamma_1.0_yhatsoft_nofloat_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_1.0_gamma_1.0_yhatsoft_nofloat_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-# model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_30.0_gamma_10.0_yhatsoft_nofloat_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
-model_name = 'ntcd_M2_info_VAD_Lenc_aux_v3_alpha_10.0_beta_30.0_gamma_1.0_yhatsoft_nofloat_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+# model_name = 'ntcd_M2_info_VAD_v1ter_Lenc_aux_v3_alpha_10.0_beta_10.0_gamma_10.0_yhatsoft_nofloat_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+# model_name = 'ntcd_M2_info_VAD_v1ter_Lenc_aux_v3_alpha_0.0_beta_30.0_gamma_10.0_y_nofloat_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+# model_name = 'ntcd_M2_info_VAD_v1ter_Lenc_aux_v3_alpha_10.0_beta_30.0_gamma_10.0_yhatsoft_nofloat_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+# model_name = 'ntcd_M2_info_VAD_v1ter_Lenc_aux_v3_alpha_0.0_beta_20.0_gamma_10.0_y_nofloat_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+# model_name = 'ntcd_M2_info_VAD_v1ter_Lenc_aux_v3_alpha_10.0_beta_30.0_gamma_30.0_yhatsoft_nofloat_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+# model_name = 'ntcd_M2_info_VAD_v1ter_Lenc_aux_v3_alpha_1.0_beta_10.0_gamma_1.0_yhatsoft_nofloat_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+# model_name = 'ntcd_M2_info_VAD_v1ter_Lenc_aux_v3_alpha_10.0_beta_10.0_gamma_1.0_yhatsoft_nofloat_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+# model_name = 'ntcd_M2_info_VAD_v1ter_Lenc_aux_v3_alpha_10.0_beta_30.0_gamma_1.0_yhatsoft_nofloat_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
+model_name = 'ntcd_M2_info_VAD_v1ter_Lenc_aux_v3_alpha_10.0_beta_40.0_gamma_10.0_yhatsoft_nofloat_nonorm_hdim_{:03d}_{:03d}_zdim_{:03d}_end_epoch_{:03d}'.format(h_dim[0], h_dim[1], z_dim, end_epoch)
 
 # Data directories
 input_video_dir = os.path.join('data', dataset_size, 'processed/')
@@ -177,7 +144,7 @@ def main():
             y_hat_class_soft = model.classify_fromX(x)
             r, z, mu, logvar = model(x, y_hat_class_soft)
             # r, z, mu, logvar = model(x, torch.sigmoid(y_hat_class_soft))
-            # r, z, mu, logvar = model(x, 10.*y)
+            # r, z, mu, logvar = model(x, y)
             ELBO, recon_loss, KL = elbo(x, r, mu, logvar, eps)
 
             # Add + alpha * BCE (Classifier)
@@ -185,6 +152,7 @@ def main():
             
             # Add - beta * BCE (Encoder)
             # Train the encoder to NOT predict y from z
+            z, mu, logvar = model.enc_dec_clf.encoder(x)
             y_hat_aux_soft = model.classify_fromZ(z)
             # aux_enc_loss = beta * binary_cross_entropy(y_hat_aux_soft, y, eps)
             # aux_enc_loss = beta * binary_cross_entropy_v2(y_hat_aux_soft, eps)
@@ -198,6 +166,7 @@ def main():
 
             # Add + beta * BCE (Aux)
             # Train the aux net to predict y from z
+            z, mu, logvar = model.enc_dec_clf.encoder(x)
             y_hat_aux_soft = model.classify_fromZ(z.detach()) #detach: to ONLY update the AUX net #the prediction here for GT being predY
             # aux_loss = beta * binary_cross_entropy(y_hat_aux_soft, y, eps)
             aux_loss = gamma * binary_cross_entropy(y_hat_aux_soft, y, eps)
@@ -261,7 +230,7 @@ def main():
                 y_hat_class_soft = model.classify_fromX(x)
                 r, z, mu, logvar = model(x, y_hat_class_soft)
                 # r, z, mu, logvar = model(x, torch.sigmoid(y_hat_class_soft))
-                # r, z, mu, logvar = model(x, 10.*y)
+                # r, z, mu, logvar = model(x, y)
                 ELBO, recon_loss, KL = elbo(x, r, mu, logvar, eps)
 
                 # Add + alpha * BCE (Classifier)
